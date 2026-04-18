@@ -12,13 +12,16 @@ public class IngestionRunner implements CommandLineRunner {
     private final ArxivClient arxivClient;
     private final PdfParser pdfParser;
     private final CitationFetcher citationFetcher;
+    private final RepoSearcher repoSearcher;
     private final ObjectMapper objectMapper;
 
     public IngestionRunner(ArxivClient arxivClient, PdfParser pdfParser,
-                           CitationFetcher citationFetcher, ObjectMapper objectMapper) {
+                           CitationFetcher citationFetcher, RepoSearcher repoSearcher,
+                           ObjectMapper objectMapper) {
         this.arxivClient = arxivClient;
         this.pdfParser = pdfParser;
         this.citationFetcher = citationFetcher;
+        this.repoSearcher = repoSearcher;
         this.objectMapper = objectMapper;
     }
 
@@ -41,5 +44,9 @@ public class IngestionRunner implements CommandLineRunner {
 
         CitationGraph citations = citationFetcher.fetch(arxivId);
         System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(citations));
+
+        java.util.List<RepoResult> repos = repoSearcher.search(meta);
+        System.out.println("\n=== Top GitHub Repos ===");
+        System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(repos));
     }
 }
