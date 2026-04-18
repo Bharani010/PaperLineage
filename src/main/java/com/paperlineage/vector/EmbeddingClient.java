@@ -20,7 +20,7 @@ public class EmbeddingClient {
 
     private static final Logger log = LoggerFactory.getLogger(EmbeddingClient.class);
     private static final String MODEL_URL =
-            "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2";
+            "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2";
     private static final int DIMENSIONS = 384;
 
     private final WebClient webClient;
