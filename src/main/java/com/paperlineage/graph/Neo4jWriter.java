@@ -23,8 +23,10 @@ public class Neo4jWriter {
         this.paperRepository = paperRepository;
     }
 
+    public record ScoredRepo(RepoResult repo, double fidelityScore) {}
+
     @Transactional
-    public PaperNode write(PaperMetadata metadata, CitationGraph citations, List<RepoResult> repos) {
+    public PaperNode write(PaperMetadata metadata, CitationGraph citations, List<ScoredRepo> repos) {
         log.info("Writing paper {} to Neo4j", metadata.arxivId());
 
         List<AuthorNode> authors = metadata.authors().stream()
@@ -32,7 +34,9 @@ public class Neo4jWriter {
                 .toList();
 
         List<RepoNode> repoNodes = repos.stream()
-                .map(r -> new RepoNode(r.fullName(), r.url(), r.description(), r.language(), r.stars()))
+                .map(sr -> new RepoNode(
+                        sr.repo().fullName(), sr.repo().url(), sr.repo().description(),
+                        sr.repo().language(), sr.repo().stars(), sr.fidelityScore()))
                 .toList();
 
         List<PaperNode> citationNodes = Stream.concat(

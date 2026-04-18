@@ -62,7 +62,8 @@ class Neo4jIntegrationTest {
                 20000
         );
 
-        PaperNode saved = neo4jWriter.write(metadata, citationGraph, List.of(repo));
+        PaperNode saved = neo4jWriter.write(metadata, citationGraph,
+                List.of(new Neo4jWriter.ScoredRepo(repo, 0.87)));
 
         assertThat(saved.arxivId()).isEqualTo(TEST_ARXIV_ID);
         assertThat(saved.authors()).hasSize(2);

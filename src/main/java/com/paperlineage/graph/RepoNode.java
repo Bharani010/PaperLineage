@@ -9,5 +9,6 @@ public record RepoNode(
         String url,
         String description,
         String language,
-        int stars
+        int stars,
+        double fidelityScore
 ) {}
