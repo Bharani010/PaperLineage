@@ -11,10 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Stores and retrieves embeddings via Supabase PostgREST.
- * Requires the schema in supabase-schema.sql to be applied once in the Supabase SQL editor.
- */
 @Service
 public class PgVectorClient {
 
@@ -34,7 +30,7 @@ public class PgVectorClient {
         log.info("Storing embedding for source={}", source);
         webClient.post()
                 .uri("/rest/v1/embeddings")
-                .headers(h -> authHeaders(h))
+                .headers(this::defaultHeaders)
                 .header("Prefer", "return=minimal")
                 .bodyValue(Map.of(
                         "source", source,
@@ -50,7 +46,7 @@ public class PgVectorClient {
         log.info("Querying top-{} similar chunks", topK);
         JsonNode response = webClient.post()
                 .uri("/rest/v1/rpc/match_embeddings")
-                .headers(h -> authHeaders(h))
+                .headers(this::defaultHeaders)
                 .bodyValue(Map.of(
                         "query_embedding", toVectorString(queryEmbedding),
                         "match_count", topK
@@ -62,12 +58,21 @@ public class PgVectorClient {
         return parseChunks(response);
     }
 
+    public void deleteBySource(String source) {
+        webClient.delete()
+                .uri(u -> u.path("/rest/v1/embeddings").queryParam("source", "eq." + source).build())
+                .headers(this::defaultHeaders)
+                .retrieve()
+                .toBodilessEntity()
+                .block();
+    }
+
     private List<EmbeddingChunk> parseChunks(JsonNode response) {
         List<EmbeddingChunk> results = new ArrayList<>();
         if (response == null || !response.isArray()) return results;
         for (JsonNode row : response) {
             results.add(new EmbeddingChunk(
-                    row.path("id").isNull() ? null : row.path("id").asLong(),
+                    row.hasNonNull("id") ? row.path("id").asLong() : null,
                     row.path("source").asText(null),
                     row.path("chunk_text").asText(null),
                     null
@@ -76,7 +81,7 @@ public class PgVectorClient {
         return results;
     }
 
-    private void authHeaders(org.springframework.http.HttpHeaders h) {
+    private void defaultHeaders(org.springframework.http.HttpHeaders h) {
         h.set("apikey", serviceKey);
         h.set("Authorization", "Bearer " + serviceKey);
         h.set("Content-Type", "application/json");

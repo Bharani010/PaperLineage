@@ -1,0 +1,4 @@
+management:
+  health:
+    neo4j:
+      enabled: false

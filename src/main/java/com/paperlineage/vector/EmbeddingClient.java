@@ -75,7 +75,8 @@ public class EmbeddingClient {
     private boolean isRetryable(Throwable e) {
         if (e instanceof WebClientResponseException ex) {
             return ex.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS
-                    || ex.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE;
+                    || ex.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE
+                    || ex.getStatusCode() == HttpStatus.BAD_GATEWAY;
         }
         return false;
     }
