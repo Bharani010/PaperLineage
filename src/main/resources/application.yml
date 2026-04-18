@@ -1,6 +1,8 @@
 spring:
   application:
     name: paperlineage
+  main:
+    web-application-type: servlet
 
 server:
   port: ${PORT:8080}
