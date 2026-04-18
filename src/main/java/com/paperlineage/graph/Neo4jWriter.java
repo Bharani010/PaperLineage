@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Stream;
 
 @Service
 public class Neo4jWriter {
@@ -39,9 +38,7 @@ public class Neo4jWriter {
                         sr.repo().language(), sr.repo().stars(), sr.fidelityScore()))
                 .toList();
 
-        List<PaperNode> citationNodes = Stream.concat(
-                        citations.backwardCitations().stream(),
-                        citations.forwardCitations().stream())
+        List<PaperNode> citationNodes = citations.backwardCitations().stream()
                 .map(this::toCitationStub)
                 .toList();
 
