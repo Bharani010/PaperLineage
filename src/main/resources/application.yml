@@ -3,6 +3,12 @@ spring:
     name: paperlineage
   main:
     web-application-type: servlet
+  neo4j:
+    uri: ${NEO4J_URI:bolt://localhost:7687}
+    authentication:
+      username: ${NEO4J_USERNAME:neo4j}
+      password: ${NEO4J_PASSWORD:}
+    connection-timeout: 5s
 
 server:
   port: ${PORT:8080}
@@ -28,13 +34,6 @@ huggingface:
 
 semantic-scholar:
   api-key: ${SEMANTIC_SCHOLAR_API_KEY:}
-
-neo4j:
-  uri: ${NEO4J_URI:bolt://localhost:7687}
-  authentication:
-    username: ${NEO4J_USERNAME:neo4j}
-    password: ${NEO4J_PASSWORD:}
-  connection-timeout: 5s
 
 supabase:
   url: ${SUPABASE_URL:}

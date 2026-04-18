@@ -13,14 +13,13 @@ import reactor.util.retry.Retry;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class EmbeddingClient {
 
     private static final Logger log = LoggerFactory.getLogger(EmbeddingClient.class);
     private static final String MODEL_URL =
-            "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2";
+            "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction";
     private static final int DIMENSIONS = 384;
 
     private final WebClient webClient;
@@ -44,7 +43,7 @@ public class EmbeddingClient {
                 .uri("")
                 .header("Authorization", "Bearer " + apiKey)
                 .header("Content-Type", "application/json")
-                .bodyValue(Map.of("inputs", texts))
+                .bodyValue(texts)
                 .retrieve()
                 .bodyToMono(JsonNode.class)
                 .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(5))

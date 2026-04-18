@@ -33,32 +33,41 @@ public class CitationFetcher {
 
     public CitationGraph fetch(String arxivId) {
         log.info("Fetching citations for arXiv:{}", arxivId);
+        try {
+            JsonNode root = webClient.get()
+                    .uri("/paper/arXiv:{id}?fields={fields}", arxivId, FIELDS)
+                    .headers(h -> {
+                        if (apiKey != null && !apiKey.isBlank()) {
+                            h.set("x-api-key", apiKey);
+                        }
+                    })
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .retryWhen(Retry.fixedDelay(1, Duration.ofSeconds(2))
+                            .filter(e -> e instanceof WebClientResponseException.TooManyRequests))
+                    .block();
 
-        JsonNode root = webClient.get()
-                .uri("/paper/arXiv:{id}?fields={fields}", arxivId, FIELDS)
-                .headers(h -> {
-                    if (apiKey != null && !apiKey.isBlank()) {
-                        h.set("x-api-key", apiKey);
-                    }
-                })
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .retryWhen(Retry.fixedDelay(1, Duration.ofSeconds(2))
-                        .filter(e -> e instanceof WebClientResponseException.TooManyRequests))
-                .block();
+            if (root == null) {
+                return emptyCitationGraph(arxivId);
+            }
 
-        if (root == null) {
-            return new CitationGraph(null, null, List.of(), List.of(), 0, 0);
+            String paperId = textOrNull(root, "paperId");
+            String title = textOrNull(root, "title");
+
+            List<CitationEntry> forward = parseEntries(root.path("citations"));
+            List<CitationEntry> backward = parseEntries(root.path("references"));
+
+            return new CitationGraph(paperId, title, forward, backward,
+                    forward.size(), backward.size());
+        } catch (Exception e) {
+            log.warn("Citation fetch failed for arXiv:{} — continuing without citations: {}",
+                    arxivId, e.getMessage());
+            return emptyCitationGraph(arxivId);
         }
+    }
 
-        String paperId = textOrNull(root, "paperId");
-        String title = textOrNull(root, "title");
-
-        List<CitationEntry> forward = parseEntries(root.path("citations"));
-        List<CitationEntry> backward = parseEntries(root.path("references"));
-
-        return new CitationGraph(paperId, title, forward, backward,
-                forward.size(), backward.size());
+    private CitationGraph emptyCitationGraph(String arxivId) {
+        return new CitationGraph(arxivId, null, List.of(), List.of(), 0, 0);
     }
 
     private List<CitationEntry> parseEntries(JsonNode arrayNode) {
