@@ -89,9 +89,16 @@ public class IngestionService {
     }
 
     private float[] embedAndStore(String source, String text) {
-        float[] embedding = embeddingClient.embed(text);
-        pgVectorClient.store(source, text, embedding);
-        return embedding;
+        try {
+            float[] embedding = embeddingClient.embed(text);
+            if (embedding.length > 0) {
+                pgVectorClient.store(source, text, embedding);
+            }
+            return embedding;
+        } catch (Exception e) {
+            log.warn("Embedding/store failed for source={}: {}", source, e.getMessage());
+            return new float[0];
+        }
     }
 
     private String repoDescription(RepoResult repo) {

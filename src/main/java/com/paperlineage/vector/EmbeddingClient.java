@@ -13,13 +13,14 @@ import reactor.util.retry.Retry;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class EmbeddingClient {
 
     private static final Logger log = LoggerFactory.getLogger(EmbeddingClient.class);
     private static final String MODEL_URL =
-            "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction";
+            "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2";
     private static final int DIMENSIONS = 384;
 
     private final WebClient webClient;
@@ -38,19 +39,26 @@ public class EmbeddingClient {
 
     public List<float[]> embedBatch(List<String> texts) {
         log.info("Embedding {} text chunk(s) via HuggingFace", texts.size());
-
-        JsonNode response = webClient.post()
-                .uri("")
-                .header("Authorization", "Bearer " + apiKey)
-                .header("Content-Type", "application/json")
-                .bodyValue(texts)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(5))
-                        .filter(this::isRetryable))
-                .block();
-
-        return parseEmbeddings(response);
+        try {
+            JsonNode response = webClient.post()
+                    .uri("")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Content-Type", "application/json")
+                    .bodyValue(Map.of("inputs", texts))
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(5))
+                            .filter(this::isRetryable))
+                    .block();
+            return parseEmbeddings(response);
+        } catch (WebClientResponseException e) {
+            log.warn("HuggingFace embedding failed ({} {}): {}",
+                    e.getStatusCode().value(), e.getStatusText(), e.getResponseBodyAsString());
+            return List.of();
+        } catch (Exception e) {
+            log.warn("HuggingFace embedding failed: {}", e.getMessage());
+            return List.of();
+        }
     }
 
     private List<float[]> parseEmbeddings(JsonNode response) {
