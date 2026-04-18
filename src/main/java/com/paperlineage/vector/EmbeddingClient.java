@@ -20,7 +20,7 @@ public class EmbeddingClient {
 
     private static final Logger log = LoggerFactory.getLogger(EmbeddingClient.class);
     private static final String MODEL_URL =
-            "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2";
+            "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2";
     private static final int DIMENSIONS = 384;
 
     private final WebClient webClient;
@@ -30,6 +30,7 @@ public class EmbeddingClient {
                            @Value("${HUGGINGFACE_API_KEY:}") String apiKey) {
         this.webClient = webClientBuilder.baseUrl(MODEL_URL).build();
         this.apiKey = apiKey;
+        log.info("EmbeddingClient init: apiKey={}", apiKey.isBlank() ? "MISSING" : "set (" + apiKey.length() + " chars)");
     }
 
     public float[] embed(String text) {
