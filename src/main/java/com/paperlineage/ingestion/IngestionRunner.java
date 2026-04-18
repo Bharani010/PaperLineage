@@ -11,11 +11,14 @@ public class IngestionRunner implements CommandLineRunner {
 
     private final ArxivClient arxivClient;
     private final PdfParser pdfParser;
+    private final CitationFetcher citationFetcher;
     private final ObjectMapper objectMapper;
 
-    public IngestionRunner(ArxivClient arxivClient, PdfParser pdfParser, ObjectMapper objectMapper) {
+    public IngestionRunner(ArxivClient arxivClient, PdfParser pdfParser,
+                           CitationFetcher citationFetcher, ObjectMapper objectMapper) {
         this.arxivClient = arxivClient;
         this.pdfParser = pdfParser;
+        this.citationFetcher = citationFetcher;
         this.objectMapper = objectMapper;
     }
 
@@ -35,5 +38,8 @@ public class IngestionRunner implements CommandLineRunner {
         PaperMetadata meta = arxivClient.fetch(arxivId);
         meta = pdfParser.enrich(meta);
         System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(meta));
+
+        CitationGraph citations = citationFetcher.fetch(arxivId);
+        System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(citations));
     }
 }
