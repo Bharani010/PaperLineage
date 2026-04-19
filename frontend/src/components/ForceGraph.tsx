@@ -20,80 +20,105 @@ export function ForceGraph({ nodes, links, selectedId, onNodeClick }: Props) {
 
     svg.selectAll('*').remove();
 
-    // ── Defs: filters + arrow marker ────────────────────────
     const defs = svg.append('defs');
 
+    // ── Glow filters ─────────────────────────────────────────
     defs.append('filter').attr('id', 'glow-paper').html(`
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    `);
+    defs.append('filter').attr('id', 'glow-repo').html(`
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    `);
+    defs.append('filter').attr('id', 'glow-selected').html(`
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    `);
+    defs.append('filter').attr('id', 'glow-hover').html(`
+      <feGaussianBlur stdDeviation="14" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    `);
+    // text glow filters
+    defs.append('filter').attr('id', 'text-glow').html(`
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    `);
+    defs.append('filter').attr('id', 'text-glow-hover').html(`
       <feGaussianBlur stdDeviation="5" result="blur"/>
       <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     `);
 
-    defs.append('filter').attr('id', 'glow-repo').html(`
-      <feGaussianBlur stdDeviation="4" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    `);
+    // ── Glass gradients per node type ─────────────────────────
+    const makeGlassGrad = (id: string, c1: string, c2: string) => {
+      const g = defs.append('radialGradient').attr('id', id)
+        .attr('cx', '38%').attr('cy', '30%').attr('r', '70%');
+      g.append('stop').attr('offset', '0%').attr('stop-color', c1).attr('stop-opacity', '0.95');
+      g.append('stop').attr('offset', '100%').attr('stop-color', c2).attr('stop-opacity', '0.98');
+    };
+    makeGlassGrad('glass-paper-root', '#2a3860', '#0e1428');
+    makeGlassGrad('glass-paper',      '#1c2445', '#0b1020');
+    makeGlassGrad('glass-repo-run',   '#103825', '#061810');
+    makeGlassGrad('glass-repo-risky', '#382510', '#180e04');
+    makeGlassGrad('glass-repo-skip',  '#2a1410', '#140804');
 
-    defs.append('filter').attr('id', 'glow-selected').html(`
-      <feGaussianBlur stdDeviation="8" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    `);
-
+    // ── Arrow marker (tip-at-endpoint design) ─────────────────
     defs.append('marker')
       .attr('id', 'arrow')
-      .attr('viewBox', '0 -4 8 8')
-      .attr('refX', 14)
+      .attr('viewBox', '0 -5 10 10')
+      .attr('refX', 8)
       .attr('refY', 0)
-      .attr('markerWidth', 6)
-      .attr('markerHeight', 6)
+      .attr('markerWidth', 7)
+      .attr('markerHeight', 7)
       .attr('orient', 'auto')
       .append('path')
-      .attr('d', 'M0,-4L8,0L0,4')
-      .attr('fill', 'rgba(139,181,232,0.35)');
+      .attr('d', 'M0,-5L10,0L0,5Z')
+      .attr('fill', 'rgba(139,181,232,0.7)');
 
-    // ── Radial background gradient ───────────────────────────
-    const grad = defs.append('radialGradient')
-      .attr('id', 'bg-grad')
+    // ── Background ────────────────────────────────────────────
+    const bg = defs.append('radialGradient').attr('id', 'bg-grad')
       .attr('cx', '50%').attr('cy', '50%').attr('r', '60%');
-    grad.append('stop').attr('offset', '0%').attr('stop-color', '#0d0f16');
-    grad.append('stop').attr('offset', '100%').attr('stop-color', '#0a0c10');
+    bg.append('stop').attr('offset', '0%').attr('stop-color', '#0d0f18');
+    bg.append('stop').attr('offset', '100%').attr('stop-color', '#080a0e');
 
-    svg.append('rect').attr('width', width).attr('height', height)
-      .attr('fill', 'url(#bg-grad)');
+    svg.append('rect').attr('width', width).attr('height', height).attr('fill', 'url(#bg-grad)');
 
-    // ── Zoom container ───────────────────────────────────────
+    // ── Zoom container ────────────────────────────────────────
     const g = svg.append('g');
     gRef.current = g.node();
 
     const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.15, 4])
+      .scaleExtent([0.12, 5])
       .on('zoom', (event) => g.attr('transform', event.transform));
     svg.call(zoom);
 
     if (nodes.length === 0) return;
 
-    // ── Build simulation ─────────────────────────────────────
+    // ── Simulation ────────────────────────────────────────────
     const sim = d3.forceSimulation<GraphNode>(nodes)
       .force('link', d3.forceLink<GraphNode, GraphLink>(links)
         .id((d) => d.id)
         .distance((l) => {
           const src = l.source as GraphNode;
           const tgt = l.target as GraphNode;
-          return src.isRoot || tgt.isRoot ? 120 : 90;
+          return src.isRoot || tgt.isRoot ? 140 : 100;
         })
-        .strength(0.4))
-      .force('charge', d3.forceManyBody().strength(-350))
+        .strength(0.35))
+      .force('charge', d3.forceManyBody().strength(-420))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collide', d3.forceCollide<GraphNode>((d) => nodeRadius(d) + 18));
+      .force('collide', d3.forceCollide<GraphNode>((d) => nodeRadius(d) + 22));
     simRef.current = sim;
 
-    // ── Links ────────────────────────────────────────────────
-    const link = g.append('g').selectAll('line')
+    // ── Links (paths so we can trim endpoints) ────────────────
+    const link = g.append('g').selectAll<SVGPathElement, GraphLink>('path')
       .data(links)
-      .join('line')
-      .attr('class', 'graph-link')
+      .join('path')
+      .attr('fill', 'none')
+      .attr('stroke', 'rgba(139,181,232,0.35)')
+      .attr('stroke-width', 1.2)
       .attr('marker-end', 'url(#arrow)');
 
-    // ── Nodes ────────────────────────────────────────────────
+    // ── Node groups ───────────────────────────────────────────
     const node = g.append('g').selectAll<SVGGElement, GraphNode>('g')
       .data(nodes, (d) => d.id)
       .join('g')
@@ -112,67 +137,118 @@ export function ForceGraph({ nodes, links, selectedId, onNodeClick }: Props) {
           }),
       );
 
-    // outer glow ring (selected indicator)
+    // outer selection ring
     node.append('circle')
-      .attr('r', (d) => nodeRadius(d) + 6)
-      .attr('fill', 'none')
-      .attr('stroke', (d) => d.type === 'paper' ? 'rgba(139,181,232,0.5)' : 'rgba(110,203,168,0.5)')
-      .attr('stroke-width', 1.5)
       .attr('class', 'node-ring')
+      .attr('r', (d) => nodeRadius(d) + 7)
+      .attr('fill', 'none')
+      .attr('stroke', (d) => d.type === 'paper' ? 'rgba(139,181,232,0.55)' : 'rgba(110,203,168,0.55)')
+      .attr('stroke-width', 1.5)
       .style('opacity', (d) => (d.id === selectedId ? 1 : 0));
 
-    // main circle
+    // glass base circle
     node.append('circle')
       .attr('class', 'node-circle')
       .attr('r', (d) => nodeRadius(d))
-      .attr('fill', (d) => nodeFill(d))
-      .attr('stroke', (d) => d.type === 'paper' ? '#8bb5e8' : '#6ecba8')
-      .attr('stroke-width', (d) => d.isRoot ? 2.5 : 1.5)
-      .attr('filter', (d) => {
-        if (d.id === selectedId) return 'url(#glow-selected)';
-        return d.type === 'paper' ? 'url(#glow-paper)' : 'url(#glow-repo)';
-      });
+      .attr('fill', (d) => glassGradId(d))
+      .attr('stroke', (d) => d.type === 'paper' ? 'rgba(139,181,232,0.6)' : 'rgba(110,203,168,0.6)')
+      .attr('stroke-width', (d) => d.isRoot ? 2 : 1.5)
+      .attr('filter', (d) => d.id === selectedId ? 'url(#glow-selected)' : d.type === 'paper' ? 'url(#glow-paper)' : 'url(#glow-repo)');
 
-    // pulse ring for root paper
-    node.filter((d) => d.isRoot === true)
+    // glass shine (top-left highlight ellipse)
+    node.append('ellipse')
+      .attr('rx', (d) => nodeRadius(d) * 0.55)
+      .attr('ry', (d) => nodeRadius(d) * 0.28)
+      .attr('cx', (d) => -nodeRadius(d) * 0.18)
+      .attr('cy', (d) => -nodeRadius(d) * 0.38)
+      .attr('fill', 'rgba(255,255,255,0.12)')
+      .attr('pointer-events', 'none');
+
+    // pulse ring for root
+    node.filter((d) => !!d.isRoot)
       .append('circle')
-      .attr('r', (d) => nodeRadius(d) + 2)
+      .attr('r', (d) => nodeRadius(d) + 3)
       .attr('fill', 'none')
-      .attr('stroke', 'rgba(139,181,232,0.5)')
-      .attr('stroke-width', 1)
+      .attr('stroke', 'rgba(139,181,232,0.45)')
+      .attr('stroke-width', 1.5)
       .style('animation', 'pulse 2.5s ease-in-out infinite');
 
-    // label
+    // main label
     node.append('text')
-      .attr('class', 'node-label')
-      .attr('dy', (d) => nodeRadius(d) + 14)
-      .text((d) => truncate(d.label, d.isRoot ? 22 : 18))
-      .attr('fill', (d) => d.id === selectedId ? '#e8e6e0' : '#8a8884')
-      .attr('font-size', (d) => d.isRoot ? 12 : 10)
-      .attr('font-weight', (d) => d.isRoot ? 600 : 400);
+      .attr('class', 'node-label-main')
+      .attr('text-anchor', 'middle')
+      .attr('dy', (d) => nodeRadius(d) + 17)
+      .text((d) => truncate(d.label, d.isRoot ? 24 : 20))
+      .attr('fill', (d) => d.id === selectedId ? '#e8e6e0' : '#b8b5b0')
+      .attr('font-size', (d) => d.isRoot ? 13 : 11)
+      .attr('font-weight', (d) => d.isRoot ? 600 : 400)
+      .attr('font-family', "'DM Mono', monospace")
+      .attr('filter', 'url(#text-glow)')
+      .attr('pointer-events', 'none');
 
-    // sublabel (year for papers, stars for repos)
+    // sub-label (year / score)
     node.append('text')
-      .attr('class', 'node-label')
-      .attr('dy', (d) => nodeRadius(d) + 26)
+      .attr('class', 'node-label-sub')
+      .attr('text-anchor', 'middle')
+      .attr('dy', (d) => nodeRadius(d) + 30)
       .text((d) => {
         if (d.type === 'paper' && d.year) return String(d.year);
-        if (d.type === 'repo' && d.runnabilityScore !== undefined)
-          return `${d.runnabilityScore}/100`;
+        if (d.type === 'repo' && d.runnabilityScore !== undefined) return `${d.runnabilityScore}/100`;
         return '';
       })
-      .attr('fill', '#555350')
-      .attr('font-size', 9);
+      .attr('fill', '#6a6865')
+      .attr('font-size', 10)
+      .attr('font-family', "'DM Mono', monospace")
+      .attr('pointer-events', 'none');
 
-    node.on('click', (_, d) => onNodeClick(d));
+    // ── Hover interactions ────────────────────────────────────
+    node
+      .on('mouseover', function(_, d) {
+        d3.select(this).select('.node-circle')
+          .attr('filter', 'url(#glow-hover)');
+        d3.select(this).select('.node-label-main')
+          .attr('font-size', d.isRoot ? 15 : 13)
+          .attr('fill', '#e8e6e0')
+          .attr('filter', 'url(#text-glow-hover)');
+        d3.select(this).select('.node-label-sub')
+          .attr('font-size', 11)
+          .attr('fill', '#a0a0a0');
+        // nudge sub-label down slightly to accommodate bigger main label
+        d3.select(this).select('.node-label-sub')
+          .attr('dy', nodeRadius(d) + 33);
+      })
+      .on('mouseout', function(_, d) {
+        const isSel = d.id === selectedId;
+        d3.select(this).select('.node-circle')
+          .attr('filter', isSel ? 'url(#glow-selected)' : d.type === 'paper' ? 'url(#glow-paper)' : 'url(#glow-repo)');
+        d3.select(this).select('.node-label-main')
+          .attr('font-size', d.isRoot ? 13 : 11)
+          .attr('fill', isSel ? '#e8e6e0' : '#b8b5b0')
+          .attr('filter', 'url(#text-glow)');
+        d3.select(this).select('.node-label-sub')
+          .attr('font-size', 10)
+          .attr('fill', '#6a6865')
+          .attr('dy', nodeRadius(d) + 30);
+      })
+      .on('click', (_, d) => onNodeClick(d));
 
-    // ── Tick ─────────────────────────────────────────────────
+    // ── Tick: trim link endpoints to node surfaces ────────────
     sim.on('tick', () => {
-      link
-        .attr('x1', (d) => (d.source as GraphNode).x ?? 0)
-        .attr('y1', (d) => (d.source as GraphNode).y ?? 0)
-        .attr('x2', (d) => (d.target as GraphNode).x ?? 0)
-        .attr('y2', (d) => (d.target as GraphNode).y ?? 0);
+      link.attr('d', (l) => {
+        const s = l.source as GraphNode;
+        const t = l.target as GraphNode;
+        const sx = s.x ?? 0, sy = s.y ?? 0;
+        const tx = t.x ?? 0, ty = t.y ?? 0;
+        const dx = tx - sx, dy = ty - sy;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const rs = nodeRadius(s) + 2;
+        const rt = nodeRadius(t) + 4; // leave room for arrowhead
+        const x1 = sx + (dx / dist) * rs;
+        const y1 = sy + (dy / dist) * rs;
+        const x2 = tx - (dx / dist) * rt;
+        const y2 = ty - (dy / dist) * rt;
+        return `M${x1},${y1}L${x2},${y2}`;
+      });
 
       node.attr('transform', (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
     });
@@ -180,13 +256,16 @@ export function ForceGraph({ nodes, links, selectedId, onNodeClick }: Props) {
     return () => { sim.stop(); };
   }, [nodes, links, selectedId, onNodeClick]);
 
-  // update selected ring when selection changes without full re-render
+  // ── Update selection ring without full re-render ──────────
   useEffect(() => {
     if (!gRef.current) return;
-    d3.select(gRef.current).selectAll<SVGCircleElement, GraphNode>('.node-ring')
+    const root = d3.select(gRef.current);
+    root.selectAll<SVGCircleElement, GraphNode>('.node-ring')
       .style('opacity', (d) => (d.id === selectedId ? 1 : 0));
-    d3.select(gRef.current).selectAll<SVGTextElement, GraphNode>('.node-label:first-of-type')
-      .attr('fill', (d) => (d.id === selectedId ? '#e8e6e0' : '#8a8884'));
+    root.selectAll<SVGCircleElement, GraphNode>('.node-circle')
+      .attr('filter', (d) => d.id === selectedId ? 'url(#glow-selected)' : d.type === 'paper' ? 'url(#glow-paper)' : 'url(#glow-repo)');
+    root.selectAll<SVGTextElement, GraphNode>('.node-label-main')
+      .attr('fill', (d) => d.id === selectedId ? '#e8e6e0' : '#b8b5b0');
   }, [selectedId]);
 
   return (
@@ -218,17 +297,17 @@ export function ForceGraph({ nodes, links, selectedId, onNodeClick }: Props) {
 }
 
 function nodeRadius(d: GraphNode): number {
-  if (d.type === 'paper') return d.isRoot ? 26 : 18;
+  if (d.type === 'paper') return d.isRoot ? 28 : 20;
   const stars = d.stars ?? 0;
-  return Math.max(10, Math.min(18, 8 + Math.log10(stars + 1) * 4));
+  return Math.max(11, Math.min(20, 9 + Math.log10(stars + 1) * 4));
 }
 
-function nodeFill(d: GraphNode): string {
-  if (d.type === 'paper') return d.isRoot ? '#1a2035' : '#141824';
+function glassGradId(d: GraphNode): string {
+  if (d.type === 'paper') return d.isRoot ? 'url(#glass-paper-root)' : 'url(#glass-paper)';
   const score = d.runnabilityScore ?? 0;
-  if (score >= 71) return '#0d2a22'; // green — Run it
-  if (score >= 41) return '#2a1e0d'; // amber — Risky
-  return '#2a100d';                  // red   — Don't bother
+  if (score >= 71) return 'url(#glass-repo-run)';
+  if (score >= 41) return 'url(#glass-repo-risky)';
+  return 'url(#glass-repo-skip)';
 }
 
 function truncate(s: string, max: number): string {
