@@ -126,7 +126,7 @@ export default function App() {
         onViewChange={setView}
       />
 
-      <div className="app-body">
+      <div className="layout">
         <PaperSidebar selected={selectedNode} papers={papers} onShare={handleShare} />
 
         {view === 'graph' ? (

@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 
 interface Props {
   onIngest: (arxivId: string) => void;
@@ -8,11 +8,18 @@ interface Props {
   onViewChange: (v: 'graph' | 'leaderboard') => void;
 }
 
+function parseArxivId(raw: string): string {
+  const urlMatch = raw.match(/(?:arxiv\.org|alphaxiv\.org)\/(?:abs|pdf)\/([0-9]+\.[0-9]+)/i);
+  if (urlMatch) return urlMatch[1];
+  return raw.trim().replace(/^arxiv:/i, '').replace(/v\d+$/, '').trim();
+}
+
 export function TopBar({ onIngest, loading, papersLoaded, view, onViewChange }: Props) {
   const [input, setInput] = useState('');
+  const btnRef = useRef<HTMLButtonElement>(null);
 
   const submit = () => {
-    const id = input.trim().replace(/^(arxiv:|https?:\/\/arxiv\.org\/(abs|pdf)\/)/, '').replace(/v\d+$/, '').trim();
+    const id = parseArxivId(input);
     if (id) { onIngest(id); setInput(''); }
   };
 
@@ -20,21 +27,28 @@ export function TopBar({ onIngest, loading, papersLoaded, view, onViewChange }: 
     if (e.key === 'Enter') submit();
   };
 
+  const onBtnMove = (e: MouseEvent<HTMLButtonElement>) => {
+    const btn = btnRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    btn.style.setProperty('--gx', `${((e.clientX - r.left) / r.width) * 100}%`);
+    btn.style.setProperty('--gy', `${((e.clientY - r.top) / r.height) * 100}%`);
+  };
+
   return (
-    <header className="topbar">
-      <a href="/" className="topbar-logo">
-        <div className="logo-dot" />
-        <span className="logo-text">Paper<span>Lineage</span></span>
+    <header className="nav">
+      <a href="/" className="nav-logo">
+        Paper<span>Lineage</span>
       </a>
 
-      <div className="topbar-search">
-        <svg className="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <div className="nav-search">
+        <svg className="nav-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
         </svg>
         <input
-          className="topbar-input"
+          className="nav-input"
           type="text"
-          placeholder="Enter arXiv ID (e.g. 1706.03762) or URL…"
+          placeholder="arXiv ID or URL (arxiv.org, alphaxiv.org)…"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKey}
@@ -42,7 +56,13 @@ export function TopBar({ onIngest, loading, papersLoaded, view, onViewChange }: 
         />
       </div>
 
-      <button className="btn btn-primary" onClick={submit} disabled={loading || !input.trim()}>
+      <button
+        ref={btnRef}
+        className="nav-trace-btn"
+        onClick={submit}
+        onMouseMove={onBtnMove}
+        disabled={loading || !input.trim()}
+      >
         {loading ? (
           <>
             <Spinner />
@@ -50,7 +70,7 @@ export function TopBar({ onIngest, loading, papersLoaded, view, onViewChange }: 
           </>
         ) : (
           <>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
             Trace
@@ -58,39 +78,26 @@ export function TopBar({ onIngest, loading, papersLoaded, view, onViewChange }: 
         )}
       </button>
 
-      <div className="view-toggle">
+      <div className="nav-tabs">
         <button
-          className={`view-toggle-btn${view === 'graph' ? ' active' : ''}`}
+          className={`nav-tab${view === 'graph' ? ' active' : ''}`}
           onClick={() => onViewChange('graph')}
-          title="Graph view"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="5" cy="12" r="3"/><circle cx="19" cy="5" r="3"/><circle cx="19" cy="19" r="3"/>
-            <path d="M7.5 10.5 16.5 6.5M7.5 13.5 16.5 17.5"/>
-          </svg>
           Graph
         </button>
         <button
-          className={`view-toggle-btn${view === 'leaderboard' ? ' active' : ''}`}
+          className={`nav-tab${view === 'leaderboard' ? ' active' : ''}`}
           onClick={() => onViewChange('leaderboard')}
-          title="Leaderboard"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M3 12h4M3 6h8M3 18h12"/><path d="M11 3v18"/>
-          </svg>
           Rankings
         </button>
       </div>
 
-      <div className="topbar-status">
-        <span
-          className={`status-dot ${papersLoaded > 0 ? 'ok' : loading ? 'loading' : ''}`}
-        />
-        {papersLoaded > 0
-          ? `${papersLoaded} paper${papersLoaded > 1 ? 's' : ''} loaded`
-          : loading
-          ? 'Ingesting…'
-          : 'Ready'}
+      <div className="nav-status">
+        <span className={`nav-dot${papersLoaded === 0 && !loading ? ' inactive' : loading ? ' loading' : ''}`} />
+        <span className="nav-papers">
+          {loading ? 'ingesting…' : papersLoaded > 0 ? `${papersLoaded} paper${papersLoaded > 1 ? 's' : ''}` : 'ready'}
+        </span>
       </div>
     </header>
   );
@@ -98,8 +105,8 @@ export function TopBar({ onIngest, loading, papersLoaded, view, onViewChange }: 
 
 function Spinner() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 0.7s linear infinite' }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+      style={{ animation: 'spin 0.7s linear infinite' }}>
       <path d="M21 12a9 9 0 1 1-6.219-8.56" />
     </svg>
   );

@@ -10,13 +10,13 @@ interface Props {
 export function PaperSidebar({ selected, papers, onShare }: Props) {
   if (!selected) {
     return (
-      <aside className="sidebar">
-        <div className="sidebar-empty">
-          <div className="sidebar-empty-icon">🔬</div>
+      <aside className="left-panel">
+        <div className="panel-empty">
+          <div className="panel-empty-icon">⬡</div>
           <h3>Select a node</h3>
-          <p>Click any paper or repository node to see its full analysis.</p>
+          <p>Click any paper or repository in the graph to see its full analysis.</p>
           {papers.length === 0 && (
-            <p style={{ marginTop: 8 }}>Enter an arXiv ID above to get started.</p>
+            <p style={{ marginTop: 8 }}>Paste an arXiv ID or URL above to get started.</p>
           )}
         </div>
       </aside>
@@ -33,45 +33,37 @@ export function PaperSidebar({ selected, papers, onShare }: Props) {
   return <RepoDetail node={selected} repo={repo ?? null} paperTitle={ownerPaper?.title ?? ''} />;
 }
 
-// ── Paper detail view ─────────────────────────────────────────
+// ── Paper detail ──────────────────────────────────────────────
 
 function PaperDetail({ node, paper, onShare }: { node: GraphNode; paper: IngestionResult | null; onShare: (id: string) => void }) {
   return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="sidebar-type-badge badge-paper">Paper</span>
-            <button className="share-btn" onClick={() => onShare(node.id)} title="Copy shareable link">
-              ↗ Share
-            </button>
-          </div>
-          <p className="sidebar-title">{node.label}</p>
-        </div>
+    <aside className="left-panel">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <span className="paper-tag">Paper</span>
+        <button className="share-btn" style={{ marginLeft: 'auto' }} onClick={() => onShare(node.id)} title="Copy shareable link">
+          ↗ Share
+        </button>
       </div>
 
-      <div className="sidebar-body">
-        {/* Core metadata */}
-        <div className="info-row">
-          <span className="info-label">arXiv</span>
-          <span className="info-value">
-            <a href={`https://arxiv.org/abs/${node.id}`} target="_blank" rel="noopener noreferrer">
-              {node.id}
-            </a>
-          </span>
-        </div>
+      <p className="paper-title-serif">{node.label}</p>
 
-        {node.year && (
-          <div className="info-row">
-            <span className="info-label">Published</span>
-            <span className="info-value">{node.year}</span>
+      <div className="meta-section">
+        <div>
+          <div className="meta-label">arXiv</div>
+          <div className="meta-value">
+            <a href={`https://arxiv.org/abs/${node.id}`} target="_blank" rel="noopener noreferrer">{node.id}</a>
           </div>
-        )}
-
-        {node.authors && node.authors.length > 0 && (
-          <div className="info-row">
-            <span className="info-label">Authors</span>
-            <div className="authors-list">
+        </div>
+        {node.year ? (
+          <div>
+            <div className="meta-label">Published</div>
+            <div className="meta-value plain">{node.year}</div>
+          </div>
+        ) : null}
+        {node.authors && node.authors.length > 0 ? (
+          <div>
+            <div className="meta-label">Authors</div>
+            <div className="author-chips" style={{ marginTop: 4 }}>
               {node.authors.slice(0, 5).map((a) => (
                 <span key={a} className="author-chip">{a}</span>
               ))}
@@ -80,56 +72,52 @@ function PaperDetail({ node, paper, onShare }: { node: GraphNode; paper: Ingesti
               )}
             </div>
           </div>
-        )}
+        ) : null}
+      </div>
 
-        {paper && (
-          <div className="stats-row">
-            <div className="stat-card">
-              <div className="stat-value">{paper.forwardCitations}</div>
-              <div className="stat-label">Cited by</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{paper.backwardCitations}</div>
-              <div className="stat-label">References</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{paper.repos.length}</div>
-              <div className="stat-label">Repos</div>
-            </div>
+      {paper ? (
+        <div className="stats-grid">
+          <div className="stat-cell">
+            <span className="stat-num">{paper.forwardCitations}</span>
+            <span className="stat-lbl">Cited by</span>
           </div>
-        )}
+          <div className="stat-cell">
+            <span className="stat-num">{paper.backwardCitations}</span>
+            <span className="stat-lbl">Refs</span>
+          </div>
+          <div className="stat-cell">
+            <span className="stat-num">{paper.repos.length}</span>
+            <span className="stat-lbl">Repos</span>
+          </div>
+        </div>
+      ) : null}
 
-        {/* Papers With Code section */}
-        {paper?.pwcData && <PwcSection pwc={paper.pwcData} />}
+      {paper?.pwcData ? <PwcSection pwc={paper.pwcData} /> : null}
+      {paper?.hfModels && paper.hfModels.length > 0 ? <HfSection models={paper.hfModels} /> : null}
 
-        {/* HuggingFace section */}
-        {paper?.hfModels && paper.hfModels.length > 0 && (
-          <HfSection models={paper.hfModels} />
-        )}
-
-        {/* Implementation leaderboard */}
-        {paper && paper.repos.length > 0 && (
-          <div className="repos-section">
-            <p className="repos-section-title">Implementations — by runnability</p>
+      {paper && paper.repos.length > 0 ? (
+        <>
+          <p className="section-divider" style={{ marginTop: 14 }}>Implementations — by runnability</p>
+          <div className="impl-list">
             {paper.repos.map((repo, i) => (
               <RepoRow key={repo.fullName} repo={repo} rank={i + 1} />
             ))}
           </div>
-        )}
-      </div>
+        </>
+      ) : null}
     </aside>
   );
 }
 
-// ── Papers With Code section ──────────────────────────────────
+// ── Papers With Code ──────────────────────────────────────────
 
 function PwcSection({ pwc }: { pwc: PwcData }) {
   if (!pwc.found) {
     return (
       <div className="ext-section">
-        <div className="ext-section-header">
-          <span className="ext-section-title">Papers With Code</span>
-          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>Not indexed</span>
+        <div className="ext-header">
+          <span className="ext-title">Papers With Code</span>
+          <span style={{ fontSize: 10, color: 'var(--text3)' }}>Not indexed</span>
         </div>
       </div>
     );
@@ -137,64 +125,50 @@ function PwcSection({ pwc }: { pwc: PwcData }) {
 
   return (
     <div className="ext-section">
-      <div className="ext-section-header">
-        <span className="ext-section-title">Papers With Code</span>
-        {pwc.pwcId && (
-          <a
-            className="pwc-link"
-            href={`https://paperswithcode.com/paper/${pwc.pwcId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+      <div className="ext-header">
+        <span className="ext-title">Papers With Code</span>
+        {pwc.pwcId ? (
+          <a className="pwc-link" href={`https://paperswithcode.com/paper/${pwc.pwcId}`} target="_blank" rel="noopener noreferrer">
             View ↗
           </a>
-        )}
+        ) : null}
       </div>
 
-      {pwc.tasks.length > 0 && (
-        <div className="info-row" style={{ marginBottom: 10 }}>
-          <span className="info-label">Tasks</span>
-          <div className="authors-list" style={{ marginTop: 4 }}>
-            {pwc.tasks.map((t) => (
-              <span key={t} className="task-chip">{t}</span>
-            ))}
+      {pwc.tasks.length > 0 ? (
+        <div style={{ marginBottom: 10 }}>
+          <div className="meta-label" style={{ marginBottom: 4 }}>Tasks</div>
+          <div className="chip-list">
+            {pwc.tasks.map((t) => <span key={t} className="task-chip">{t}</span>)}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {pwc.methods.length > 0 && (
-        <div className="info-row" style={{ marginBottom: 10 }}>
-          <span className="info-label">Methods</span>
-          <div className="authors-list" style={{ marginTop: 4 }}>
-            {pwc.methods.slice(0, 6).map((m) => (
-              <span key={m} className="method-chip">{m}</span>
-            ))}
+      {pwc.methods.length > 0 ? (
+        <div style={{ marginBottom: 10 }}>
+          <div className="meta-label" style={{ marginBottom: 4 }}>Methods</div>
+          <div className="chip-list">
+            {pwc.methods.slice(0, 6).map((m) => <span key={m} className="method-chip">{m}</span>)}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {pwc.topResults.length > 0 && (
-        <div className="info-row">
-          <span className="info-label">Benchmarks</span>
-          <div style={{ marginTop: 6, overflowX: 'auto' }}>
+      {pwc.topResults.length > 0 ? (
+        <div>
+          <div className="meta-label" style={{ marginBottom: 6 }}>Benchmarks</div>
+          <div style={{ overflowX: 'auto' }}>
             <table className="benchmark-table">
               <thead>
                 <tr>
-                  <th>Dataset</th>
-                  <th>Metric</th>
-                  <th>Value</th>
-                  <th></th>
+                  <th>Dataset</th><th>Metric</th><th>Value</th><th></th>
                 </tr>
               </thead>
               <tbody>
-                {pwc.topResults.map((r, i) => (
-                  <BenchmarkRow key={i} result={r} />
-                ))}
+                {pwc.topResults.map((r, i) => <BenchmarkRow key={i} result={r} />)}
               </tbody>
             </table>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -202,9 +176,7 @@ function PwcSection({ pwc }: { pwc: PwcData }) {
 function BenchmarkRow({ result }: { result: BenchmarkResult }) {
   return (
     <tr>
-      <td style={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {result.dataset}
-      </td>
+      <td style={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.dataset}</td>
       <td>{result.metric}</td>
       <td style={{ fontWeight: 600, color: 'var(--text-1)' }}>{result.value}</td>
       <td>{result.isSota && <span className="sota-badge">SOTA</span>}</td>
@@ -212,54 +184,50 @@ function BenchmarkRow({ result }: { result: BenchmarkResult }) {
   );
 }
 
-// ── HuggingFace section ───────────────────────────────────────
+// ── HuggingFace ───────────────────────────────────────────────
 
 function HfSection({ models }: { models: HfModelInfo[] }) {
   return (
     <div className="ext-section">
-      <div className="ext-section-header">
-        <span className="ext-section-title">🤗 HuggingFace Models</span>
-        <span style={{ fontSize: 10, color: 'var(--emerald)' }}>{models.length} found</span>
+      <div className="ext-header">
+        <span className="ext-title">🤗 HuggingFace Models</span>
+        <span style={{ fontSize: 10, color: 'var(--accent3)' }}>{models.length} found</span>
       </div>
-      {models.map((m) => (
-        <a
-          key={m.modelId}
-          href={`https://huggingface.co/${m.modelId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hf-model-item"
-        >
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <div className="hf-model-name">{m.modelId}</div>
-          </div>
-          {m.pipelineTag && <span className="hf-pipeline-tag">{m.pipelineTag}</span>}
-          <span className="hf-downloads">⬇ {formatCount(m.downloads)}</span>
-        </a>
-      ))}
+      <div className="model-list">
+        {models.map((m) => (
+          <a key={m.modelId} href={`https://huggingface.co/${m.modelId}`} target="_blank" rel="noopener noreferrer" className="model-item">
+            <span className="model-name">{m.modelId}</span>
+            <div className="model-meta">
+              {m.pipelineTag ? <span className="model-badge">{m.pipelineTag}</span> : null}
+              <span className="model-downloads">⬇ {formatCount(m.downloads)}</span>
+            </div>
+          </a>
+        ))}
+      </div>
     </div>
   );
 }
 
-// ── Repo sections ─────────────────────────────────────────────
+// ── Repo rows (in paper detail) ───────────────────────────────
 
 function RepoRow({ repo, rank }: { repo: ScoredRepo; rank: number }) {
-  const color = labelColor(repo.runnabilityLabel);
+  const badgeClass =
+    repo.runnabilityLabel === 'Run it' ? 'badge-run' :
+    repo.runnabilityLabel === 'Risky'  ? 'badge-risky' : 'badge-skip';
   return (
-    <a href={repo.url} target="_blank" rel="noopener noreferrer" className="repo-item">
-      <span style={{ fontSize: 10, color: 'var(--text-3)', width: 14, flexShrink: 0 }}>#{rank}</span>
+    <a href={repo.url} target="_blank" rel="noopener noreferrer" className="impl-item">
+      <span className="impl-rank">#{rank}</span>
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        <div className="repo-item-name">{repo.fullName.split('/')[1]}</div>
-        <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>
-          {repo.fullName.split('/')[0]}
-        </div>
+        <div className="impl-name">{repo.fullName.split('/')[1]}</div>
+        <div className="impl-sub">{repo.fullName.split('/')[0]}</div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color }}>{repo.runnabilityScore}</span>
-        <span style={{ fontSize: 9, color, fontWeight: 600 }}>{repo.runnabilityLabel}</span>
-      </div>
+      <span className={`impl-badge ${badgeClass}`}>{repo.runnabilityLabel}</span>
+      <span className="impl-score">{repo.runnabilityScore}</span>
     </a>
   );
 }
+
+// ── Repo detail view ──────────────────────────────────────────
 
 function RepoDetail({ node, repo, paperTitle }: { node: GraphNode; repo: ScoredRepo | null; paperTitle: string }) {
   const color = labelColor(node.runnabilityLabel ?? '');
@@ -295,88 +263,73 @@ function RepoDetail({ node, repo, paperTitle }: { node: GraphNode; repo: ScoredR
   }
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-          <span className="sidebar-type-badge badge-repo">Repository</span>
-          <p className="sidebar-title">{node.label}</p>
-        </div>
-      </div>
-      <div className="sidebar-body">
-        {node.url && (
-          <div className="info-row">
-            <span className="info-label">GitHub</span>
-            <span className="info-value">
+    <aside className="left-panel">
+      <span className="repo-tag">Repository</span>
+      <p className="paper-title-serif">{node.label}</p>
+
+      {node.url ? (
+        <div className="meta-section">
+          <div>
+            <div className="meta-label">GitHub</div>
+            <div className="meta-value">
               <a href={node.url} target="_blank" rel="noopener noreferrer">{node.id}</a>
-            </span>
+            </div>
           </div>
-        )}
-        {repo && (
-          <>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              background: 'var(--bg-surface2)', border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-md)', padding: '14px 16px',
-            }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 32, fontWeight: 800, color, lineHeight: 1 }}>
-                  {repo.runnabilityScore}
-                </div>
-                <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>/ 100</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color }}>{repo.runnabilityLabel}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 3 }}>
-                  ★ {repo.stars.toLocaleString()} stars
-                </div>
-              </div>
-            </div>
+        </div>
+      ) : null}
 
-            <div className="fidelity-bar-wrap">
-              <div className="fidelity-bar-bg">
-                <div className="fidelity-bar-fill"
-                  style={{ width: `${repo.runnabilityScore}%`, background: `linear-gradient(90deg,${color}99,${color})` }} />
-              </div>
+      {repo ? (
+        <>
+          <div className="repo-score-block">
+            <div style={{ textAlign: 'center' }}>
+              <div className="repo-score-num" style={{ color }}>{repo.runnabilityScore}</div>
+              <div className="repo-score-sub">/ 100</div>
             </div>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              <SignalBadge ok={repo.hasCi}     label="CI"     />
-              <SignalBadge ok={repo.hasDocker} label="Docker" />
-              <SignalBadge ok={repo.hasDeps}   label="Deps"   />
-              <SignalBadge
-                ok={repo.daysSinceCommit <= 365}
-                label={`${commitAge(repo.daysSinceCommit)} ago`}
-              />
+            <div>
+              <div className="repo-score-label" style={{ color }}>{repo.runnabilityLabel}</div>
+              <div className="repo-score-stars">★ {repo.stars.toLocaleString()} stars</div>
             </div>
+          </div>
 
-            <div className="stats-row">
-              <div className="stat-card">
-                <div className="stat-value">{repo.stars.toLocaleString()}</div>
-                <div className="stat-label">Stars</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value">{commitAge(repo.daysSinceCommit)}</div>
-                <div className="stat-label">Last commit</div>
-              </div>
+          <div className="fidelity-bar-wrap">
+            <div className="fidelity-bar-bg">
+              <div className="fidelity-bar-fill"
+                style={{ width: `${repo.runnabilityScore}%`, background: `linear-gradient(90deg,${color}99,${color})` }} />
             </div>
+          </div>
 
-            {/* How to Run */}
-            {!guide && (
-              <button
-                className="run-guide-btn"
-                onClick={loadGuide}
-                disabled={guideLoading}
-              >
-                {guideLoading ? '⏳ Generating guide…' : '▶ How to Run'}
-              </button>
-            )}
-            {guideError && (
-              <p style={{ fontSize: 11, color: 'var(--red)', marginTop: 8 }}>{guideError}</p>
-            )}
-            {guide && <RunGuidePanel guide={guide} />}
-          </>
-        )}
-      </div>
+          <div className="signal-badges">
+            <SignalBadge ok={repo.hasCi}     label="CI"     />
+            <SignalBadge ok={repo.hasDocker} label="Docker" />
+            <SignalBadge ok={repo.hasDeps}   label="Deps"   />
+            <SignalBadge
+              ok={repo.daysSinceCommit <= 365}
+              label={`${commitAge(repo.daysSinceCommit)} ago`}
+            />
+          </div>
+
+          <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+            <div className="stat-cell">
+              <span className="stat-num">{repo.stars.toLocaleString()}</span>
+              <span className="stat-lbl">Stars</span>
+            </div>
+            <div className="stat-cell">
+              <span className="stat-num">{commitAge(repo.daysSinceCommit)}</span>
+              <span className="stat-lbl">Last commit</span>
+            </div>
+          </div>
+
+          {!guide ? (
+            <button className="run-guide-btn" onClick={loadGuide} disabled={guideLoading}>
+              {guideLoading ? '⏳ Generating guide…' : '▶ How to Run'}
+            </button>
+          ) : null}
+          {guideError ? (
+            <p style={{ fontSize: 11, color: 'var(--red)', marginTop: 8 }}>{guideError}</p>
+          ) : null}
+          {guide ? <RunGuidePanel guide={guide} /> : null}
+        </>
+      ) : null}
     </aside>
   );
 }
@@ -385,31 +338,29 @@ function RepoDetail({ node, repo, paperTitle }: { node: GraphNode; repo: ScoredR
 
 function RunGuidePanel({ guide }: { guide: RunGuide }) {
   const diffColor =
-    guide.difficulty === 'Easy' ? 'var(--emerald)' :
-    guide.difficulty === 'Hard' ? 'var(--red)' : '#f59e0b';
+    guide.difficulty === 'Easy' ? 'var(--accent3)' :
+    guide.difficulty === 'Hard' ? 'var(--red)' : 'var(--accent)';
 
   return (
     <div className="run-guide-panel">
       <div className="run-guide-header">
         <span style={{ fontWeight: 700, fontSize: 13 }}>How to Run</span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: diffColor, fontWeight: 600 }}>
-            {guide.difficulty}
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>~{guide.estimatedTime}</span>
+          <span style={{ fontSize: 11, color: diffColor, fontWeight: 600 }}>{guide.difficulty}</span>
+          <span style={{ fontSize: 11, color: 'var(--text3)' }}>~{guide.estimatedTime}</span>
         </div>
       </div>
 
-      {guide.prerequisites.length > 0 && (
+      {guide.prerequisites.length > 0 ? (
         <div className="run-guide-section">
           <p className="run-guide-section-title">Prerequisites</p>
           <ul className="run-guide-list">
             {guide.prerequisites.map((p, i) => <li key={i}>{p}</li>)}
           </ul>
         </div>
-      )}
+      ) : null}
 
-      {guide.steps.length > 0 && (
+      {guide.steps.length > 0 ? (
         <div className="run-guide-section">
           <p className="run-guide-section-title">Steps</p>
           {guide.steps.map((step, i) => (
@@ -417,38 +368,32 @@ function RunGuidePanel({ guide }: { guide: RunGuide }) {
               <div className="run-guide-step-num">{i + 1}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="run-guide-step-title">{step.title}</div>
-                {step.command && (
-                  <code className="run-guide-command">{step.command}</code>
-                )}
-                {step.notes && (
-                  <p className="run-guide-notes">{step.notes}</p>
-                )}
+                {step.command ? <code className="run-guide-command">{step.command}</code> : null}
+                {step.notes ? <p className="run-guide-notes">{step.notes}</p> : null}
               </div>
             </div>
           ))}
         </div>
-      )}
+      ) : null}
 
-      {guide.commonIssues.length > 0 && (
+      {guide.commonIssues.length > 0 ? (
         <div className="run-guide-section">
           <p className="run-guide-section-title">Common Issues</p>
           <ul className="run-guide-list run-guide-issues">
             {guide.commonIssues.map((issue, i) => <li key={i}>{issue}</li>)}
           </ul>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
 
 function SignalBadge({ ok, label }: { ok: boolean; label: string }) {
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '3px 8px', borderRadius: 20, fontSize: 11, fontWeight: 500,
-      background: ok ? 'rgba(16,185,129,0.1)' : 'rgba(71,85,105,0.2)',
-      color: ok ? 'var(--emerald)' : 'var(--text-3)',
-      border: `1px solid ${ok ? 'rgba(16,185,129,0.25)' : 'rgba(71,85,105,0.2)'}`,
+    <span className="signal-badge" style={{
+      background: ok ? 'rgba(110,203,168,0.1)' : 'rgba(71,85,105,0.15)',
+      color: ok ? 'var(--accent3)' : 'var(--text3)',
+      border: `1px solid ${ok ? 'rgba(110,203,168,0.25)' : 'rgba(71,85,105,0.2)'}`,
     }}>
       {ok ? '✓' : '✗'} {label}
     </span>
@@ -456,9 +401,9 @@ function SignalBadge({ ok, label }: { ok: boolean; label: string }) {
 }
 
 function labelColor(label: string) {
-  if (label === 'Run it') return '#10b981';
-  if (label === 'Risky')  return '#f59e0b';
-  return '#ef4444';
+  if (label === 'Run it') return '#6ecba8';
+  if (label === 'Risky')  return '#c8a96e';
+  return '#e07060';
 }
 
 function commitAge(days: number): string {

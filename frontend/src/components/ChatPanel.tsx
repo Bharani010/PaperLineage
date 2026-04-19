@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import type { ChatMessage } from '../types';
 
 type WsStatus = 'disconnected' | 'connecting' | 'connected' | 'error' | 'waking';
@@ -15,6 +15,7 @@ export function ChatPanel({ messages, status, onSend, onClear, onReconnect }: Pr
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const sendBtnRef = useRef<HTMLButtonElement>(null);
   const isStreaming = messages.some((m) => m.streaming);
 
   useEffect(() => {
@@ -23,7 +24,7 @@ export function ChatPanel({ messages, status, onSend, onClear, onReconnect }: Pr
 
   const autoResize = () => {
     const ta = textareaRef.current;
-    if (ta) { ta.style.height = 'auto'; ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`; }
+    if (ta) { ta.style.height = 'auto'; ta.style.height = `${Math.min(ta.scrollHeight, 100)}px`; }
   };
 
   const submit = () => {
@@ -37,39 +38,35 @@ export function ChatPanel({ messages, status, onSend, onClear, onReconnect }: Pr
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
   };
 
-  const wsBadgeClass = {
-    connected: 'ws-connected',
-    connecting: 'ws-connecting',
-    waking: 'ws-connecting',
-    disconnected: 'ws-disconnected',
-    error: 'ws-error',
-  }[status];
+  const onSendMove = (e: MouseEvent<HTMLButtonElement>) => {
+    const btn = sendBtnRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    btn.style.setProperty('--gx', `${((e.clientX - r.left) / r.width) * 100}%`);
+    btn.style.setProperty('--gy', `${((e.clientY - r.top) / r.height) * 100}%`);
+  };
 
   const statusLabel = status === 'waking' ? 'waking up…' : status;
 
   return (
-    <section className="chat-panel">
+    <section className="right-panel">
       <div className="chat-header">
-        <div className="chat-header-left">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--indigo)" strokeWidth="2">
+        <div className="chat-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" strokeWidth="2">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
-          <span className="chat-header-title">Research Chat</span>
-          <span className={`chat-ws-badge ${wsBadgeClass}`}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
+          Research Chat
+          <span className={`status-pill ${status}`}>
+            <span className="status-pill-dot" />
             {statusLabel}
           </span>
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 4 }}>
           {(status === 'error' || status === 'waking') && (
-            <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }} onClick={onReconnect}>
-              Reconnect
-            </button>
+            <button className="reconnect-btn" onClick={onReconnect}>Reconnect</button>
           )}
           {messages.length > 0 && (
-            <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }} onClick={onClear}>
-              Clear
-            </button>
+            <button className="chat-clear-btn" onClick={onClear}>Clear</button>
           )}
         </div>
       </div>
@@ -77,9 +74,9 @@ export function ChatPanel({ messages, status, onSend, onClear, onReconnect }: Pr
       <div className="chat-messages">
         {messages.length === 0 ? (
           <div className="chat-empty">
-            <div className="chat-empty-icon">🤖</div>
+            <div className="chat-empty-icon">✦</div>
             <h3>Ask anything</h3>
-            <p>Ask questions about ingested papers — citations, methods, implementations, or comparisons.</p>
+            <p>Ask about ingested papers — citations, methods, implementations, or comparisons.</p>
           </div>
         ) : (
           messages.map((msg) => <Message key={msg.id} msg={msg} />)
@@ -87,7 +84,7 @@ export function ChatPanel({ messages, status, onSend, onClear, onReconnect }: Pr
         <div ref={bottomRef} />
       </div>
 
-      <div className="chat-input-wrap">
+      <div className="chat-input-row">
         <textarea
           ref={textareaRef}
           className="chat-textarea"
@@ -98,8 +95,15 @@ export function ChatPanel({ messages, status, onSend, onClear, onReconnect }: Pr
           onKeyDown={onKey}
           disabled={isStreaming}
         />
-        <button className="chat-send-btn" onClick={submit} disabled={!input.trim() || isStreaming} title="Send (Enter)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <button
+          ref={sendBtnRef}
+          className="chat-send-btn"
+          onClick={submit}
+          onMouseMove={onSendMove}
+          disabled={!input.trim() || isStreaming}
+          title="Send (Enter)"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
           </svg>
         </button>
@@ -109,12 +113,11 @@ export function ChatPanel({ messages, status, onSend, onClear, onReconnect }: Pr
 }
 
 function Message({ msg }: { msg: ChatMessage }) {
-  const isUser = msg.role === 'user';
   const isEmpty = msg.streaming && msg.content === '';
 
   return (
-    <div className={`chat-bubble-wrap ${msg.role}`}>
-      <div className={`chat-bubble ${msg.role}`}>
+    <div className={`msg-wrap ${msg.role}`}>
+      <div className={`bubble ${msg.role}`}>
         {isEmpty ? (
           <ThinkingDots />
         ) : (
@@ -124,7 +127,7 @@ function Message({ msg }: { msg: ChatMessage }) {
           </>
         )}
       </div>
-      {!isUser && !msg.streaming && msg.sources && msg.sources.length > 0 && (
+      {msg.role === 'assistant' && !msg.streaming && msg.sources && msg.sources.length > 0 && (
         <div className="chat-sources">
           {msg.sources.slice(0, 5).map((s) => (
             <span key={s} className="source-tag">{s.replace('arxiv:', '').replace('github:', '')}</span>
@@ -137,25 +140,18 @@ function Message({ msg }: { msg: ChatMessage }) {
 
 function ThinkingDots() {
   return (
-    <span style={{ display: 'flex', gap: 4, alignItems: 'center', padding: '2px 0' }}>
+    <span className="thinking-dots">
       {[0, 1, 2].map((i) => (
         <span
           key={i}
           style={{
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            background: 'var(--indigo)',
+            width: 6, height: 6, borderRadius: '50%',
+            background: 'var(--accent2)',
             animation: `thinking 1.2s ease-in-out ${i * 0.2}s infinite`,
           }}
         />
       ))}
-      <style>{`
-        @keyframes thinking {
-          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-          30% { transform: translateY(-4px); opacity: 1; }
-        }
-      `}</style>
+      <style>{`@keyframes thinking { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-4px);opacity:1} }`}</style>
     </span>
   );
 }
