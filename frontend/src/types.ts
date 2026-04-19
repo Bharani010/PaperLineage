@@ -76,6 +76,20 @@ export interface GraphLink extends SimulationLinkDatum<GraphNode> {
   type: 'implements';
 }
 
+export interface RunGuideStep {
+  title: string;
+  command: string;
+  notes: string;
+}
+
+export interface RunGuide {
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  estimatedTime: string;
+  prerequisites: string[];
+  steps: RunGuideStep[];
+  commonIssues: string[];
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';

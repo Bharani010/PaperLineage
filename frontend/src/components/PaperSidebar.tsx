@@ -1,4 +1,5 @@
-import type { BenchmarkResult, GraphNode, HfModelInfo, IngestionResult, PwcData, ScoredRepo } from '../types';
+import { useState } from 'react';
+import type { ApiResponse, BenchmarkResult, GraphNode, HfModelInfo, IngestionResult, PwcData, RunGuide, ScoredRepo } from '../types';
 
 interface Props {
   selected: GraphNode | null;
@@ -27,7 +28,8 @@ export function PaperSidebar({ selected, papers }: Props) {
   }
 
   const repo = papers.flatMap((p) => p.repos).find((r) => r.fullName === selected.id);
-  return <RepoDetail node={selected} repo={repo ?? null} />;
+  const ownerPaper = papers.find((p) => p.repos.some((r) => r.fullName === selected.id));
+  return <RepoDetail node={selected} repo={repo ?? null} paperTitle={ownerPaper?.title ?? ''} />;
 }
 
 // ── Paper detail view ─────────────────────────────────────────
@@ -253,8 +255,39 @@ function RepoRow({ repo, rank }: { repo: ScoredRepo; rank: number }) {
   );
 }
 
-function RepoDetail({ node, repo }: { node: GraphNode; repo: ScoredRepo | null }) {
+function RepoDetail({ node, repo, paperTitle }: { node: GraphNode; repo: ScoredRepo | null; paperTitle: string }) {
   const color = labelColor(node.runnabilityLabel ?? '');
+  const [guide, setGuide] = useState<RunGuide | null>(null);
+  const [guideLoading, setGuideLoading] = useState(false);
+  const [guideError, setGuideError] = useState<string | null>(null);
+
+  async function loadGuide() {
+    if (!repo || guideLoading) return;
+    setGuideLoading(true);
+    setGuideError(null);
+    try {
+      const base = import.meta.env.VITE_API_BASE_URL ?? '';
+      const params = new URLSearchParams({
+        repoName: repo.fullName,
+        repoUrl: repo.url,
+        hasDocker: String(repo.hasDocker),
+        hasCi: String(repo.hasCi),
+        hasDeps: String(repo.hasDeps),
+        score: String(repo.runnabilityScore),
+        paperTitle,
+      });
+      const res = await fetch(`${base}/api/run-guide?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json: ApiResponse<RunGuide> = await res.json();
+      if (json.error) throw new Error(json.error);
+      setGuide(json.data!);
+    } catch (e) {
+      setGuideError(e instanceof Error ? e.message : 'Failed to generate guide');
+    } finally {
+      setGuideLoading(false);
+    }
+  }
+
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -320,10 +353,85 @@ function RepoDetail({ node, repo }: { node: GraphNode; repo: ScoredRepo | null }
                 <div className="stat-label">Last commit</div>
               </div>
             </div>
+
+            {/* How to Run */}
+            {!guide && (
+              <button
+                className="run-guide-btn"
+                onClick={loadGuide}
+                disabled={guideLoading}
+              >
+                {guideLoading ? '⏳ Generating guide…' : '▶ How to Run'}
+              </button>
+            )}
+            {guideError && (
+              <p style={{ fontSize: 11, color: 'var(--red)', marginTop: 8 }}>{guideError}</p>
+            )}
+            {guide && <RunGuidePanel guide={guide} />}
           </>
         )}
       </div>
     </aside>
+  );
+}
+
+// ── Run Guide panel ───────────────────────────────────────────
+
+function RunGuidePanel({ guide }: { guide: RunGuide }) {
+  const diffColor =
+    guide.difficulty === 'Easy' ? 'var(--emerald)' :
+    guide.difficulty === 'Hard' ? 'var(--red)' : '#f59e0b';
+
+  return (
+    <div className="run-guide-panel">
+      <div className="run-guide-header">
+        <span style={{ fontWeight: 700, fontSize: 13 }}>How to Run</span>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 11, color: diffColor, fontWeight: 600 }}>
+            {guide.difficulty}
+          </span>
+          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>~{guide.estimatedTime}</span>
+        </div>
+      </div>
+
+      {guide.prerequisites.length > 0 && (
+        <div className="run-guide-section">
+          <p className="run-guide-section-title">Prerequisites</p>
+          <ul className="run-guide-list">
+            {guide.prerequisites.map((p, i) => <li key={i}>{p}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {guide.steps.length > 0 && (
+        <div className="run-guide-section">
+          <p className="run-guide-section-title">Steps</p>
+          {guide.steps.map((step, i) => (
+            <div key={i} className="run-guide-step">
+              <div className="run-guide-step-num">{i + 1}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="run-guide-step-title">{step.title}</div>
+                {step.command && (
+                  <code className="run-guide-command">{step.command}</code>
+                )}
+                {step.notes && (
+                  <p className="run-guide-notes">{step.notes}</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {guide.commonIssues.length > 0 && (
+        <div className="run-guide-section">
+          <p className="run-guide-section-title">Common Issues</p>
+          <ul className="run-guide-list run-guide-issues">
+            {guide.commonIssues.map((issue, i) => <li key={i}>{issue}</li>)}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 

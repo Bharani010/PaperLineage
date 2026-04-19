@@ -846,6 +846,100 @@ html, body, #root {
 }
 .pwc-link:hover { text-decoration: underline; }
 
+/* ─── Run Guide ──────────────────────────────────────────── */
+.run-guide-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--indigo);
+  background: rgba(99,102,241,0.1);
+  color: var(--indigo);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.run-guide-btn:hover:not(:disabled) { background: rgba(99,102,241,0.2); }
+.run-guide-btn:disabled { opacity: 0.55; cursor: default; }
+
+.run-guide-panel {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.run-guide-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.run-guide-section { display: flex; flex-direction: column; gap: 6px; }
+.run-guide-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-3);
+}
+.run-guide-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 11px;
+  color: var(--text-2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.run-guide-issues li { color: var(--text-3); }
+
+.run-guide-step {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.run-guide-step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--indigo);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.run-guide-step-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+.run-guide-command {
+  display: block;
+  background: var(--bg-surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  color: var(--emerald);
+  word-break: break-all;
+  white-space: pre-wrap;
+  margin-bottom: 4px;
+}
+.run-guide-notes {
+  font-size: 10px;
+  color: var(--text-3);
+  margin: 0;
+  font-style: italic;
+}
+
 /* ─── Scrollbar global ───────────────────────────────────── */
 * {
   scrollbar-width: thin;
