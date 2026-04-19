@@ -9,7 +9,9 @@ public record IngestionResult(
         List<String> authors,
         int forwardCitations,
         int backwardCitations,
-        List<ScoredRepo> repos
+        List<ScoredRepo> repos,
+        PwcData pwcData,
+        List<HfModelInfo> hfModels
 ) {
     public record ScoredRepo(
             String fullName,

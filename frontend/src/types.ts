@@ -18,6 +18,30 @@ export interface ScoredRepo {
   daysSinceCommit: number;
 }
 
+export interface BenchmarkResult {
+  task: string;
+  dataset: string;
+  metric: string;
+  value: string;
+  isSota: boolean;
+}
+
+export interface PwcData {
+  found: boolean;
+  pwcId: string | null;
+  tasks: string[];
+  methods: string[];
+  topResults: BenchmarkResult[];
+}
+
+export interface HfModelInfo {
+  modelId: string;
+  pipelineTag: string;
+  downloads: number;
+  likes: number;
+  lastModified: string;
+}
+
 export interface IngestionResult {
   arxivId: string;
   title: string;
@@ -26,6 +50,8 @@ export interface IngestionResult {
   forwardCitations: number;
   backwardCitations: number;
   repos: ScoredRepo[];
+  pwcData: PwcData | null;
+  hfModels: HfModelInfo[];
 }
 
 export interface GraphNode extends SimulationNodeDatum {
