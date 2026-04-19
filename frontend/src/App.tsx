@@ -54,7 +54,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const { messages, status, sendMessage, clearMessages } = useChat();
+  const { messages, status, sendMessage, clearMessages, reconnect } = useChat();
 
   const addToast = (type: Toast['type'], text: string) => {
     const id = crypto.randomUUID();
@@ -106,6 +106,7 @@ export default function App() {
           status={status}
           onSend={sendMessage}
           onClear={clearMessages}
+          onReconnect={reconnect}
         />
       </div>
 

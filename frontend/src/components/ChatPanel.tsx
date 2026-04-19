@@ -8,9 +8,10 @@ interface Props {
   status: WsStatus;
   onSend: (text: string) => void;
   onClear: () => void;
+  onReconnect: () => void;
 }
 
-export function ChatPanel({ messages, status, onSend, onClear }: Props) {
+export function ChatPanel({ messages, status, onSend, onClear, onReconnect }: Props) {
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -56,11 +57,18 @@ export function ChatPanel({ messages, status, onSend, onClear }: Props) {
             {status}
           </span>
         </div>
-        {messages.length > 0 && (
-          <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }} onClick={onClear}>
-            Clear
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {status === 'error' && (
+            <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }} onClick={onReconnect}>
+              Reconnect
+            </button>
+          )}
+          {messages.length > 0 && (
+            <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }} onClick={onClear}>
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="chat-messages">
