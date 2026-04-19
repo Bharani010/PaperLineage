@@ -29,8 +29,8 @@ anthropic:
 github:
   token: ${GITHUB_TOKEN:}
 
-huggingface:
-  api-key: ${HUGGINGFACE_API_KEY:}
+cohere:
+  api-key: ${COHERE_API_KEY:}
 
 semantic-scholar:
   api-key: ${SEMANTIC_SCHOLAR_API_KEY:}

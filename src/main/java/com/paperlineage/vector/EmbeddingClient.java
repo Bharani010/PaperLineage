@@ -19,61 +19,67 @@ import java.util.Map;
 public class EmbeddingClient {
 
     private static final Logger log = LoggerFactory.getLogger(EmbeddingClient.class);
-    private static final String MODEL_URL =
-            "https://router.huggingface.co/hf-inference/pipeline/feature-extraction/BAAI/bge-small-en-v1.5";
+    private static final String BASE_URL = "https://api.cohere.com";
+    private static final String MODEL = "embed-english-light-v3.0";
     private static final int DIMENSIONS = 384;
 
     private final WebClient webClient;
     private final String apiKey;
 
     public EmbeddingClient(WebClient.Builder webClientBuilder,
-                           @Value("${HUGGINGFACE_API_KEY:}") String apiKey) {
-        this.webClient = webClientBuilder.baseUrl(MODEL_URL).build();
+                           @Value("${COHERE_API_KEY:}") String apiKey) {
+        this.webClient = webClientBuilder.baseUrl(BASE_URL).build();
         this.apiKey = apiKey;
-        log.info("EmbeddingClient init: apiKey={}", apiKey.isBlank() ? "MISSING" : "set (" + apiKey.length() + " chars)");
+        log.info("EmbeddingClient init: provider=Cohere, apiKey={}", apiKey.isBlank() ? "MISSING" : "set (" + apiKey.length() + " chars)");
     }
 
     public float[] embed(String text) {
-        List<float[]> batch = embedBatch(List.of(text));
+        List<float[]> batch = embedBatch(List.of(text), "search_document");
         return batch.isEmpty() ? new float[0] : batch.get(0);
     }
 
-    public List<float[]> embedBatch(List<String> texts) {
-        log.info("Embedding {} text chunk(s) via HuggingFace", texts.size());
+    public float[] embedQuery(String text) {
+        List<float[]> batch = embedBatch(List.of(text), "search_query");
+        return batch.isEmpty() ? new float[0] : batch.get(0);
+    }
+
+    public List<float[]> embedBatch(List<String> texts, String inputType) {
+        log.info("Embedding {} text(s) via Cohere ({})", texts.size(), inputType);
         try {
             JsonNode response = webClient.post()
-                    .uri("")
+                    .uri("/v2/embed")
                     .header("Authorization", "Bearer " + apiKey)
                     .header("Content-Type", "application/json")
-                    .bodyValue(Map.of("inputs", texts))
+                    .bodyValue(Map.of(
+                            "model", MODEL,
+                            "texts", texts,
+                            "input_type", inputType,
+                            "embedding_types", List.of("float")
+                    ))
                     .retrieve()
                     .bodyToMono(JsonNode.class)
-                    .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(5))
+                    .retryWhen(Retry.fixedDelay(2, Duration.ofSeconds(3))
                             .filter(this::isRetryable))
                     .block();
             return parseEmbeddings(response);
         } catch (WebClientResponseException e) {
-            log.warn("HuggingFace embedding failed ({} {}): {}",
-                    e.getStatusCode().value(), e.getStatusText(), e.getResponseBodyAsString());
+            log.warn("Cohere embedding failed ({} {}): {}", e.getStatusCode().value(), e.getStatusText(), e.getResponseBodyAsString());
             return List.of();
         } catch (Exception e) {
-            log.warn("HuggingFace embedding failed: {}", e.getMessage());
+            log.warn("Cohere embedding failed: {}", e.getMessage());
             return List.of();
         }
     }
 
     private List<float[]> parseEmbeddings(JsonNode response) {
         List<float[]> result = new ArrayList<>();
-        if (response == null || !response.isArray()) return result;
-
-        for (JsonNode row : response) {
-            // row is either a float array [0.1, 0.2, ...] directly
-            // or a nested array [[0.1, 0.2, ...]] (some models wrap it)
-            JsonNode vectorNode = row.isArray() && row.get(0) != null && row.get(0).isArray()
-                    ? row.get(0) : row;
-            float[] vec = new float[vectorNode.size()];
-            for (int i = 0; i < vectorNode.size(); i++) {
-                vec[i] = (float) vectorNode.get(i).asDouble();
+        if (response == null) return result;
+        JsonNode floatArrays = response.path("embeddings").path("float");
+        if (!floatArrays.isArray()) return result;
+        for (JsonNode row : floatArrays) {
+            float[] vec = new float[row.size()];
+            for (int i = 0; i < row.size(); i++) {
+                vec[i] = (float) row.get(i).asDouble();
             }
             result.add(vec);
         }
@@ -83,8 +89,7 @@ public class EmbeddingClient {
     private boolean isRetryable(Throwable e) {
         if (e instanceof WebClientResponseException ex) {
             return ex.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS
-                    || ex.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE
-                    || ex.getStatusCode() == HttpStatus.BAD_GATEWAY;
+                    || ex.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE;
         }
         return false;
     }

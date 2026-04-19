@@ -36,7 +36,7 @@ public class HybridQueryEngine {
     public QueryResult query(String question) {
         log.info("HybridQueryEngine: question='{}'", question);
 
-        float[] queryVec = embeddingClient.embed(question);
+        float[] queryVec = embeddingClient.embedQuery(question);
 
         List<EmbeddingChunk> vectorChunks = pgVectorClient.findSimilar(queryVec, TOP_K_VECTOR);
         log.info("Vector search returned {} chunks", vectorChunks.size());
