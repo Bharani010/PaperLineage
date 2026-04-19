@@ -4,6 +4,7 @@ import com.paperlineage.ingestion.CitationEntry;
 import com.paperlineage.ingestion.CitationGraph;
 import com.paperlineage.ingestion.PaperMetadata;
 import com.paperlineage.ingestion.RepoResult;
+import com.paperlineage.ingestion.RunnabilityScore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -22,7 +23,7 @@ public class Neo4jWriter {
         this.paperRepository = paperRepository;
     }
 
-    public record ScoredRepo(RepoResult repo, double fidelityScore) {}
+    public record ScoredRepo(RepoResult repo, RunnabilityScore score) {}
 
     @Transactional
     public PaperNode write(PaperMetadata metadata, CitationGraph citations, List<ScoredRepo> repos) {
@@ -34,8 +35,18 @@ public class Neo4jWriter {
 
         List<RepoNode> repoNodes = repos.stream()
                 .map(sr -> new RepoNode(
-                        sr.repo().fullName(), sr.repo().url(), sr.repo().description(),
-                        sr.repo().language(), sr.repo().stars(), sr.fidelityScore()))
+                        sr.repo().fullName(),
+                        sr.repo().url(),
+                        sr.repo().description(),
+                        sr.repo().language(),
+                        sr.repo().stars(),
+                        sr.score().total(),
+                        sr.score().label(),
+                        sr.score().hasCi(),
+                        sr.score().hasDocker(),
+                        sr.score().hasDeps(),
+                        sr.score().daysSinceCommit()
+                ))
                 .toList();
 
         List<PaperNode> citationNodes = citations.backwardCitations().stream()

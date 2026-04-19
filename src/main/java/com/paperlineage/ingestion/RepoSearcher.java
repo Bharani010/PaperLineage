@@ -19,7 +19,7 @@ public class RepoSearcher {
 
     private static final Logger log = LoggerFactory.getLogger(RepoSearcher.class);
     private static final String BASE_URL = "https://api.github.com";
-    private static final int MAX_RESULTS = 5;
+    private static final int MAX_RESULTS = 10;
 
     private final WebClient webClient;
     private final String githubToken;
@@ -69,7 +69,8 @@ public class RepoSearcher {
                     textOrNull(item, "description"),
                     textOrNull(item, "language"),
                     item.path("stargazers_count").asInt(0),
-                    item.path("forks_count").asInt(0)
+                    item.path("forks_count").asInt(0),
+                    item.path("open_issues_count").asInt(0)
             ));
         }
         return results;

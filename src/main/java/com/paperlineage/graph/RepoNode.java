@@ -10,5 +10,10 @@ public record RepoNode(
         String description,
         String language,
         int stars,
-        double fidelityScore
+        int runnabilityScore,
+        String runnabilityLabel,
+        boolean hasCi,
+        boolean hasDocker,
+        boolean hasDeps,
+        int daysSinceCommit
 ) {}

@@ -11,5 +11,15 @@ public record IngestionResult(
         int backwardCitations,
         List<ScoredRepo> repos
 ) {
-    public record ScoredRepo(String fullName, String url, int stars, double fidelityScore) {}
+    public record ScoredRepo(
+            String fullName,
+            String url,
+            int stars,
+            int runnabilityScore,
+            String runnabilityLabel,
+            boolean hasCi,
+            boolean hasDocker,
+            boolean hasDeps,
+            int daysSinceCommit
+    ) {}
 }

@@ -38,7 +38,11 @@ function buildGraph(papers: IngestionResult[]): { nodes: GraphNode[]; links: Gra
           type: 'repo',
           label: repoId.split('/')[1] ?? repoId,
           stars: repo.stars,
-          fidelityScore: repo.fidelityScore,
+          runnabilityScore: repo.runnabilityScore,
+          runnabilityLabel: repo.runnabilityLabel,
+          hasCi: repo.hasCi,
+          hasDocker: repo.hasDocker,
+          hasDeps: repo.hasDeps,
           url: repo.url,
         });
       }

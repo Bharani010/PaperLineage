@@ -10,7 +10,12 @@ export interface ScoredRepo {
   fullName: string;
   url: string;
   stars: number;
-  fidelityScore: number;
+  runnabilityScore: number;
+  runnabilityLabel: 'Run it' | 'Risky' | "Don't bother";
+  hasCi: boolean;
+  hasDocker: boolean;
+  hasDeps: boolean;
+  daysSinceCommit: number;
 }
 
 export interface IngestionResult {
@@ -27,12 +32,15 @@ export interface GraphNode extends SimulationNodeDatum {
   id: string;
   type: 'paper' | 'repo';
   label: string;
-  sublabel?: string;
   year?: number;
   forwardCitations?: number;
   backwardCitations?: number;
   stars?: number;
-  fidelityScore?: number;
+  runnabilityScore?: number;
+  runnabilityLabel?: string;
+  hasCi?: boolean;
+  hasDocker?: boolean;
+  hasDeps?: boolean;
   url?: string;
   authors?: string[];
   isRoot?: boolean;

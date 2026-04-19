@@ -6,5 +6,6 @@ public record RepoResult(
         String description,
         String language,
         int stars,
-        int forks
+        int forks,
+        int openIssuesCount
 ) {}

@@ -157,7 +157,8 @@ export function ForceGraph({ nodes, links, selectedId, onNodeClick }: Props) {
       .attr('dy', (d) => nodeRadius(d) + 26)
       .text((d) => {
         if (d.type === 'paper' && d.year) return String(d.year);
-        if (d.type === 'repo' && d.stars) return `★ ${d.stars.toLocaleString()}`;
+        if (d.type === 'repo' && d.runnabilityScore !== undefined)
+          return `${d.runnabilityScore}/100`;
         return '';
       })
       .attr('fill', '#475569')
@@ -223,12 +224,12 @@ function nodeRadius(d: GraphNode): number {
 }
 
 function nodeFill(d: GraphNode): string {
-  if (d.type === 'paper') {
-    return d.isRoot
-      ? 'radial-gradient(circle at 35% 35%, #a5b4fc, #4f46e5)' // fallback
-      : '#3730a3';
-  }
-  return '#065f46';
+  if (d.type === 'paper') return d.isRoot ? '#3730a3' : '#312e81';
+  // repo: colour by runnability
+  const score = d.runnabilityScore ?? 0;
+  if (score >= 71) return '#065f46'; // green — Run it
+  if (score >= 41) return '#78350f'; // amber — Risky
+  return '#450a0a';                  // red   — Don't bother
 }
 
 function truncate(s: string, max: number): string {
