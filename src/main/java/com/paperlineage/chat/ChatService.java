@@ -1,5 +1,6 @@
 package com.paperlineage.chat;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -11,9 +12,9 @@ import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class ChatService {
@@ -21,11 +22,24 @@ public class ChatService {
     private static final Logger log = LoggerFactory.getLogger(ChatService.class);
     private static final String ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
     private static final String MODEL = "claude-haiku-4-5-20251001";
-    private static final String SYSTEM_PROMPT = """
-            You are a research assistant for PaperLineage, a tool that traces academic paper \
-            citation lineage and maps GitHub implementations. Answer questions about academic \
-            papers concisely and accurately based on the provided context. Focus on research \
-            contributions, citation relationships, and implementation details.""";
+    private static final String SYSTEM_PROMPT =
+            "You are a research assistant. Answer questions about academic papers concisely " +
+            "and accurately based on the provided context. Focus on research contributions, " +
+            "citation relationships, and implementation details.";
+
+    // ── Request records ─────────────────────────────────────
+
+    record Message(String role, String content) {}
+
+    record MessagesRequest(
+            String model,
+            @JsonProperty("max_tokens") int maxTokens,
+            boolean stream,
+            String system,
+            List<Message> messages
+    ) {}
+
+    // ─────────────────────────────────────────────────────────
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
@@ -44,15 +58,12 @@ public class ChatService {
                 ? userMessage
                 : "Context:\n" + context + "\n\nQuestion: " + userMessage;
 
-        Map<String, Object> body = Map.of(
-                "model", MODEL,
-                "max_tokens", 1024,
-                "stream", true,
-                "system", SYSTEM_PROMPT,
-                "messages", List.of(Map.of("role", "user", "content", userContent))
+        MessagesRequest body = new MessagesRequest(
+                MODEL, 1024, true, SYSTEM_PROMPT,
+                List.of(new Message("user", userContent))
         );
 
-        log.info("Claude request: model={} contextLen={}", MODEL, context.length());
+        log.info("Claude request: model={} contextLen={} msgLen={}", MODEL, context.length(), userContent.length());
 
         return webClient.post()
                 .uri(ANTHROPIC_URL)
@@ -62,6 +73,12 @@ public class ChatService {
                 .accept(MediaType.TEXT_EVENT_STREAM)
                 .bodyValue(body)
                 .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                        response -> response.bodyToMono(String.class).flatMap(errorBody -> {
+                            log.error("Anthropic API error {}: {}", response.statusCode(), errorBody);
+                            return Mono.error(new RuntimeException(
+                                    response.statusCode() + " from Anthropic: " + errorBody));
+                        }))
                 .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
                 .mapNotNull(event -> extractTextDelta(event.data()))
                 .filter(text -> !text.isEmpty())
