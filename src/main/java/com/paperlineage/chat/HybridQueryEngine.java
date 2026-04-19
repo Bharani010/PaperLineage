@@ -38,6 +38,13 @@ public class HybridQueryEngine {
 
         float[] queryVec = embeddingClient.embedQuery(question);
 
+        // If embedding failed (missing key, API down) skip vector search gracefully —
+        // chat still works as a plain LLM without RAG context
+        if (queryVec.length == 0) {
+            log.warn("Embedding returned empty vector — skipping vector/graph search");
+            return new QueryResult("", List.of(), 0, 0);
+        }
+
         List<EmbeddingChunk> vectorChunks = pgVectorClient.findSimilar(queryVec, TOP_K_VECTOR);
         log.info("Vector search returned {} chunks", vectorChunks.size());
 

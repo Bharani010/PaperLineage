@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getWsUrl } from '../api';
 import type { ChatMessage } from '../types';
 
-type Status = 'disconnected' | 'connecting' | 'connected' | 'error';
+type Status = 'disconnected' | 'connecting' | 'connected' | 'error' | 'waking';
 
-const MAX_RETRIES = 5;
-const BASE_DELAY_MS = 2000;
+const MAX_RETRIES = 10;   // Render free tier can take up to 60s to wake
+const BASE_DELAY_MS = 3000;
 
 export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -14,16 +14,10 @@ export function useChat() {
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCount = useRef(0);
 
-  const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
-    if (retryCount.current >= MAX_RETRIES) {
-      setStatus('error');
-      return;
-    }
+  // Defined with useRef so connect() can reference it without a dep cycle
+  const connectRef = useRef<() => void>(() => {});
 
-    setStatus('connecting');
-    const ws = new WebSocket(getWsUrl());
-
+  const attachHandlers = useCallback((ws: WebSocket) => {
     ws.onopen = () => {
       retryCount.current = 0;
       setStatus('connected');
@@ -70,8 +64,8 @@ export function useChat() {
       setStatus('disconnected');
       retryCount.current += 1;
       if (retryCount.current < MAX_RETRIES) {
-        const delay = BASE_DELAY_MS * Math.pow(2, retryCount.current - 1);
-        reconnectTimer.current = setTimeout(connect, delay);
+        const delay = BASE_DELAY_MS * Math.pow(2, Math.min(retryCount.current - 1, 4));
+        reconnectTimer.current = setTimeout(() => connectRef.current(), delay);
       } else {
         setStatus('error');
       }
@@ -79,6 +73,36 @@ export function useChat() {
 
     wsRef.current = ws;
   }, []);
+
+  const connect = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    if (retryCount.current >= MAX_RETRIES) {
+      setStatus('error');
+      return;
+    }
+
+    const base = import.meta.env.VITE_API_BASE_URL ?? '';
+
+    // First attempt: ping health to wake Render from sleep before opening WebSocket
+    if (retryCount.current === 0 && base) {
+      setStatus('waking');
+      fetch(`${base}/api/health`, { signal: AbortSignal.timeout(60000) })
+        .catch(() => { /* proceed regardless — server might still start */ })
+        .finally(() => {
+          setStatus('connecting');
+          const ws = new WebSocket(getWsUrl());
+          attachHandlers(ws);
+        });
+      return;
+    }
+
+    setStatus('connecting');
+    const ws = new WebSocket(getWsUrl());
+    attachHandlers(ws);
+  }, [attachHandlers]);
+
+  // Keep ref in sync so onclose callback always calls the latest connect
+  useEffect(() => { connectRef.current = connect; }, [connect]);
 
   useEffect(() => {
     connect();
@@ -103,7 +127,7 @@ export function useChat() {
       } else {
         retryCount.current = 0;
         connect();
-        const deadline = Date.now() + 8000;
+        const deadline = Date.now() + 70000; // wait up to 70s for Render wake-up
         const wait = setInterval(() => {
           if (wsRef.current?.readyState === WebSocket.OPEN) {
             clearInterval(wait);
@@ -113,12 +137,15 @@ export function useChat() {
             setMessages((prev) => {
               const last = prev[prev.length - 1];
               if (last?.streaming) {
-                return [...prev.slice(0, -1), { ...last, streaming: false, content: 'Could not connect to backend. Check VITE_API_BASE_URL.' }];
+                return [...prev.slice(0, -1), {
+                  ...last, streaming: false,
+                  content: 'Backend is not responding. Make sure VITE_API_BASE_URL is set in Vercel.',
+                }];
               }
               return prev;
             });
           }
-        }, 200);
+        }, 500);
       }
     },
     [connect],

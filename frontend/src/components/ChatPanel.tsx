@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { ChatMessage } from '../types';
 
-type WsStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+type WsStatus = 'disconnected' | 'connecting' | 'connected' | 'error' | 'waking';
 
 interface Props {
   messages: ChatMessage[];
@@ -40,9 +40,12 @@ export function ChatPanel({ messages, status, onSend, onClear, onReconnect }: Pr
   const wsBadgeClass = {
     connected: 'ws-connected',
     connecting: 'ws-connecting',
+    waking: 'ws-connecting',
     disconnected: 'ws-disconnected',
     error: 'ws-error',
   }[status];
+
+  const statusLabel = status === 'waking' ? 'waking up…' : status;
 
   return (
     <section className="chat-panel">
@@ -54,11 +57,11 @@ export function ChatPanel({ messages, status, onSend, onClear, onReconnect }: Pr
           <span className="chat-header-title">Research Chat</span>
           <span className={`chat-ws-badge ${wsBadgeClass}`}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
-            {status}
+            {statusLabel}
           </span>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          {status === 'error' && (
+          {(status === 'error' || status === 'waking') && (
             <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }} onClick={onReconnect}>
               Reconnect
             </button>
