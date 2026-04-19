@@ -44,18 +44,23 @@ public class PgVectorClient {
 
     public List<EmbeddingChunk> findSimilar(float[] queryEmbedding, int topK) {
         log.info("Querying top-{} similar chunks", topK);
-        JsonNode response = webClient.post()
-                .uri("/rest/v1/rpc/match_embeddings")
-                .headers(this::defaultHeaders)
-                .bodyValue(Map.of(
-                        "query_embedding", toVectorString(queryEmbedding),
-                        "match_count", topK
-                ))
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .block();
-
-        return parseChunks(response);
+        try {
+            JsonNode response = webClient.post()
+                    .uri("/rest/v1/rpc/match_embeddings")
+                    .headers(this::defaultHeaders)
+                    .bodyValue(Map.of(
+                            "query_embedding", toVectorString(queryEmbedding),
+                            "match_count", topK
+                    ))
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+            log.info("match_embeddings response: {}", response);
+            return parseChunks(response);
+        } catch (Exception e) {
+            log.warn("match_embeddings RPC failed: {}", e.getMessage());
+            return List.of();
+        }
     }
 
     public void deleteBySource(String source) {
