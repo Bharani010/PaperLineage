@@ -4,6 +4,7 @@ import com.paperlineage.ingestion.CitationEntry;
 import com.paperlineage.ingestion.CitationGraph;
 import com.paperlineage.ingestion.PaperMetadata;
 import com.paperlineage.ingestion.RepoResult;
+import com.paperlineage.ingestion.RunnabilityScore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -59,11 +60,14 @@ class Neo4jIntegrationTest {
                 "Transformers library",
                 "Python",
                 100000,
-                20000
+                20000,
+                50
         );
 
         PaperNode saved = neo4jWriter.write(metadata, citationGraph,
-                List.of(new Neo4jWriter.ScoredRepo(repo, 0.87)));
+                List.of(new Neo4jWriter.ScoredRepo(repo, RunnabilityScore.zero())),
+                com.paperlineage.ingestion.PwcData.notFound(),
+                List.of());
 
         assertThat(saved.arxivId()).isEqualTo(TEST_ARXIV_ID);
         assertThat(saved.authors()).hasSize(2);
