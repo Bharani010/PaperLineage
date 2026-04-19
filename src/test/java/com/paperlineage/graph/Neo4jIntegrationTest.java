@@ -44,7 +44,8 @@ class Neo4jIntegrationTest {
                 2017,
                 "We propose the Transformer...",
                 "Multi-head self-attention...",
-                "https://arxiv.org/pdf/1706.03762"
+                "https://arxiv.org/pdf/1706.03762",
+                List.of()
         );
 
         CitationEntry citation = new CitationEntry(CITATION_ID, "BERT", List.of("Devlin"), 2018, 50000);

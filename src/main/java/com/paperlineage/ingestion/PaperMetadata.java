@@ -9,5 +9,6 @@ public record PaperMetadata(
         int year,
         String abstractText,
         String methodsText,
-        String pdfUrl
+        String pdfUrl,
+        List<String> directRepoUrls   // github.com owner/repo paths extracted from the PDF
 ) {}

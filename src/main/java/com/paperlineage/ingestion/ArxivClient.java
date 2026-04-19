@@ -55,7 +55,7 @@ public class ArxivClient {
                 authors.add(nameNodes.item(i).getTextContent().strip());
             }
 
-            return new PaperMetadata(arxivId, title, authors, year, summary, "", PDF_BASE + arxivId);
+            return new PaperMetadata(arxivId, title, authors, year, summary, "", PDF_BASE + arxivId, List.of());
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse arXiv response for " + arxivId, e);
         }
