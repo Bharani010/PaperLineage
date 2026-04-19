@@ -55,7 +55,6 @@ public class PgVectorClient {
                     .retrieve()
                     .bodyToMono(JsonNode.class)
                     .block();
-            log.info("match_embeddings response: {}", response);
             return parseChunks(response);
         } catch (Exception e) {
             log.warn("match_embeddings RPC failed: {}", e.getMessage());
