@@ -940,6 +940,195 @@ html, body, #root {
   font-style: italic;
 }
 
+/* ─── Share button ───────────────────────────────────────── */
+.share-btn {
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.share-btn:hover { color: var(--indigo); border-color: var(--indigo); }
+
+/* ─── View toggle ────────────────────────────────────────── */
+.view-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 3px;
+}
+.view-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.view-toggle-btn:hover { color: var(--text-1); }
+.view-toggle-btn.active {
+  background: var(--bg-surface3, var(--bg-hover));
+  color: var(--text-1);
+}
+
+/* ─── Leaderboard ────────────────────────────────────────── */
+.lb-wrap {
+  flex: 1;
+  overflow: auto;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.lb-header-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.lb-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin: 0;
+}
+.lb-subtitle {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.lb-table-wrap {
+  overflow-x: auto;
+}
+.lb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.lb-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.lb-row {
+  cursor: pointer;
+  transition: background 0.1s;
+  border-bottom: 1px solid var(--border);
+}
+.lb-row:hover { background: var(--bg-hover); }
+.lb-row td { padding: 10px 12px; vertical-align: middle; }
+
+.lb-rank {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-align: center;
+}
+.lb-paper-cell { max-width: 280px; }
+.lb-paper-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+.lb-paper-meta {
+  font-size: 10px;
+  color: var(--text-3);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lb-arxiv-link { color: var(--indigo); text-decoration: none; }
+.lb-arxiv-link:hover { text-decoration: underline; }
+
+.lb-year { font-size: 11px; color: var(--text-3); }
+.lb-repo-cell { max-width: 140px; }
+.lb-repo-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lb-repo-owner { font-size: 10px; color: var(--text-3); margin-top: 1px; }
+
+.lb-score-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.lb-score-num { font-size: 14px; font-weight: 800; line-height: 1; }
+.lb-score-bar-bg {
+  height: 3px;
+  background: var(--bg-hover);
+  border-radius: 2px;
+  overflow: hidden;
+  width: 80px;
+}
+.lb-score-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.lb-score-label { font-size: 9px; font-weight: 600; }
+
+.lb-signals { display: flex; gap: 4px; align-items: center; }
+.lb-signal-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.lb-num { font-size: 11px; color: var(--text-2); }
+
+.lb-actions { display: flex; gap: 4px; }
+.lb-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  color: var(--text-3);
+}
+.lb-btn:hover { background: var(--bg-hover); color: var(--text-1); }
+.lb-btn-open:hover { border-color: var(--indigo); color: var(--indigo); }
+.lb-btn-share:hover { border-color: var(--emerald); color: var(--emerald); }
+
+.lb-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-3);
+  font-size: 13px;
+}
+.lb-empty-icon { font-size: 36px; }
+
 /* ─── Scrollbar global ───────────────────────────────────── */
 * {
   scrollbar-width: thin;

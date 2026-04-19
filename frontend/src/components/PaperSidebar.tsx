@@ -4,9 +4,10 @@ import type { ApiResponse, BenchmarkResult, GraphNode, HfModelInfo, IngestionRes
 interface Props {
   selected: GraphNode | null;
   papers: IngestionResult[];
+  onShare: (arxivId: string) => void;
 }
 
-export function PaperSidebar({ selected, papers }: Props) {
+export function PaperSidebar({ selected, papers, onShare }: Props) {
   if (!selected) {
     return (
       <aside className="sidebar">
@@ -24,7 +25,7 @@ export function PaperSidebar({ selected, papers }: Props) {
 
   if (selected.type === 'paper') {
     const paper = papers.find((p) => p.arxivId === selected.id);
-    return <PaperDetail node={selected} paper={paper ?? null} />;
+    return <PaperDetail node={selected} paper={paper ?? null} onShare={onShare} />;
   }
 
   const repo = papers.flatMap((p) => p.repos).find((r) => r.fullName === selected.id);
@@ -34,12 +35,17 @@ export function PaperSidebar({ selected, papers }: Props) {
 
 // ── Paper detail view ─────────────────────────────────────────
 
-function PaperDetail({ node, paper }: { node: GraphNode; paper: IngestionResult | null }) {
+function PaperDetail({ node, paper, onShare }: { node: GraphNode; paper: IngestionResult | null; onShare: (id: string) => void }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-          <span className="sidebar-type-badge badge-paper">Paper</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="sidebar-type-badge badge-paper">Paper</span>
+            <button className="share-btn" onClick={() => onShare(node.id)} title="Copy shareable link">
+              ↗ Share
+            </button>
+          </div>
           <p className="sidebar-title">{node.label}</p>
         </div>
       </div>

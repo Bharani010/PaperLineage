@@ -1,7 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ingestPaper } from './api';
 import { ChatPanel } from './components/ChatPanel';
 import { ForceGraph } from './components/ForceGraph';
+import { LeaderboardView } from './components/LeaderboardView';
 import { PaperSidebar } from './components/PaperSidebar';
 import { TopBar } from './components/TopBar';
 import { useChat } from './hooks/useChat';
@@ -57,14 +58,15 @@ export default function App() {
   const [papers, setPapers] = useState<IngestionResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [view, setView] = useState<'graph' | 'leaderboard'>('graph');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const { messages, status, sendMessage, clearMessages, reconnect } = useChat();
 
-  const addToast = (type: Toast['type'], text: string) => {
+  const addToast = useCallback((type: Toast['type'], text: string) => {
     const id = crypto.randomUUID();
     setToasts((t) => [...t, { id, type, text }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
-  };
+  }, []);
 
   const handleIngest = useCallback(async (arxivId: string) => {
     setLoading(true);
@@ -75,16 +77,39 @@ export default function App() {
         return [result, ...prev];
       });
       setSelectedId(result.arxivId);
+      // Update URL so the page is shareable
+      const url = new URL(location.href);
+      url.searchParams.set('p', result.arxivId);
+      history.pushState({}, '', url.toString());
       addToast('success', `"${result.title.slice(0, 50)}…" ingested`);
     } catch (e) {
       addToast('error', e instanceof Error ? e.message : 'Ingestion failed');
     } finally {
       setLoading(false);
     }
+  }, [addToast]);
+
+  // Auto-ingest from ?p= query param on first load
+  useEffect(() => {
+    const p = new URLSearchParams(location.search).get('p');
+    if (p) handleIngest(p);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleShare = useCallback((arxivId: string) => {
+    const url = new URL(location.href);
+    url.searchParams.set('p', arxivId);
+    navigator.clipboard.writeText(url.toString()).then(() => {
+      addToast('success', 'Link copied to clipboard');
+    });
+  }, [addToast]);
+
+  const handleSelectFromLeaderboard = useCallback((arxivId: string) => {
+    setSelectedId(arxivId);
+    setView('graph');
   }, []);
 
   const { nodes, links } = buildGraph(papers);
-
   const selectedNode = nodes.find((n) => n.id === selectedId) ?? null;
 
   const handleNodeClick = useCallback((node: GraphNode) => {
@@ -93,17 +118,31 @@ export default function App() {
 
   return (
     <div className="app">
-      <TopBar onIngest={handleIngest} loading={loading} papersLoaded={papers.length} />
+      <TopBar
+        onIngest={handleIngest}
+        loading={loading}
+        papersLoaded={papers.length}
+        view={view}
+        onViewChange={setView}
+      />
 
       <div className="app-body">
-        <PaperSidebar selected={selectedNode} papers={papers} />
+        <PaperSidebar selected={selectedNode} papers={papers} onShare={handleShare} />
 
-        <ForceGraph
-          nodes={nodes}
-          links={links}
-          selectedId={selectedId}
-          onNodeClick={handleNodeClick}
-        />
+        {view === 'graph' ? (
+          <ForceGraph
+            nodes={nodes}
+            links={links}
+            selectedId={selectedId}
+            onNodeClick={handleNodeClick}
+          />
+        ) : (
+          <LeaderboardView
+            papers={papers}
+            onSelectPaper={handleSelectFromLeaderboard}
+            onShare={handleShare}
+          />
+        )}
 
         <ChatPanel
           messages={messages}
