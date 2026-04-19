@@ -20,23 +20,22 @@ import java.util.List;
 public class ChatService {
 
     private static final Logger log = LoggerFactory.getLogger(ChatService.class);
-    private static final String ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-    private static final String MODEL = "claude-haiku-4-5-20251001";
+    private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+    private static final String MODEL = "llama-3.3-70b-versatile";
     private static final String SYSTEM_PROMPT =
-            "You are a research assistant. Answer questions about academic papers concisely " +
-            "and accurately based on the provided context. Focus on research contributions, " +
-            "citation relationships, and implementation details.";
+            "You are a research assistant specialising in academic papers and their implementations. " +
+            "Answer questions concisely and accurately based on the provided context. " +
+            "Focus on research contributions, citation relationships, and implementation details.";
 
-    // ── Request records ─────────────────────────────────────
+    // ── Request records (OpenAI-compatible format) ───────────
 
-    record Message(String role, String content) {}
+    record ChatMessage(String role, String content) {}
 
-    record MessagesRequest(
+    record ChatRequest(
             String model,
+            List<ChatMessage> messages,
             @JsonProperty("max_tokens") int maxTokens,
-            boolean stream,
-            String system,
-            List<Message> messages
+            boolean stream
     ) {}
 
     // ─────────────────────────────────────────────────────────
@@ -47,7 +46,7 @@ public class ChatService {
 
     public ChatService(WebClient.Builder webClientBuilder,
                        ObjectMapper objectMapper,
-                       @Value("${anthropic.api-key}") String apiKey) {
+                       @Value("${groq.api-key}") String apiKey) {
         this.webClient = webClientBuilder.build();
         this.objectMapper = objectMapper;
         this.apiKey = apiKey;
@@ -58,42 +57,44 @@ public class ChatService {
                 ? userMessage
                 : "Context:\n" + context + "\n\nQuestion: " + userMessage;
 
-        MessagesRequest body = new MessagesRequest(
-                MODEL, 1024, true, SYSTEM_PROMPT,
-                List.of(new Message("user", userContent))
+        ChatRequest body = new ChatRequest(
+                MODEL,
+                List.of(
+                        new ChatMessage("system", SYSTEM_PROMPT),
+                        new ChatMessage("user", userContent)
+                ),
+                1024,
+                true
         );
 
-        log.info("Claude request: model={} contextLen={} msgLen={}", MODEL, context.length(), userContent.length());
+        log.info("Groq request: model={} contextLen={}", MODEL, context.length());
 
         return webClient.post()
-                .uri(ANTHROPIC_URL)
-                .header("x-api-key", apiKey)
-                .header("anthropic-version", "2023-06-01")
+                .uri(GROQ_URL)
+                .header("Authorization", "Bearer " + apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.TEXT_EVENT_STREAM)
                 .bodyValue(body)
                 .retrieve()
                 .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
                         response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                            log.error("Anthropic API error {}: {}", response.statusCode(), errorBody);
+                            log.error("Groq API error {}: {}", response.statusCode(), errorBody);
                             return Mono.error(new RuntimeException(
-                                    response.statusCode() + " from Anthropic: " + errorBody));
+                                    response.statusCode() + " from Groq: " + errorBody));
                         }))
                 .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
-                .mapNotNull(event -> extractTextDelta(event.data()))
+                .mapNotNull(event -> extractDelta(event.data()))
                 .filter(text -> !text.isEmpty())
-                .doOnError(e -> log.error("Claude stream error: {}", e.getMessage()));
+                .doOnError(e -> log.error("Groq stream error: {}", e.getMessage()));
     }
 
-    private String extractTextDelta(String data) {
-        if (data == null || data.isBlank()) return null;
+    private String extractDelta(String data) {
+        if (data == null || data.isBlank() || "[DONE]".equals(data.trim())) return null;
         try {
             JsonNode node = objectMapper.readTree(data);
-            if ("content_block_delta".equals(node.path("type").asText())) {
-                JsonNode delta = node.path("delta");
-                if ("text_delta".equals(delta.path("type").asText())) {
-                    return delta.path("text").asText("");
-                }
+            JsonNode content = node.path("choices").path(0).path("delta").path("content");
+            if (!content.isMissingNode() && !content.isNull()) {
+                return content.asText("");
             }
         } catch (Exception e) {
             log.debug("SSE parse skip: {}", data);

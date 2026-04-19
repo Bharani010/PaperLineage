@@ -3,10 +3,10 @@
 Research tool that traces academic paper citation lineage, maps GitHub implementations, and scores implementation fidelity — using Spring Boot, Neo4j, pgvector, and a single Claude API call only for chat.
 
 ## Hard constraints
-- Zero cost. No paid APIs beyond Claude chat calls. No GPU. Deploys to Railway free tier.
+- Zero cost. All APIs free. No GPU. Deploys to Render free tier.
 - No LLM during ingestion. Pipeline is deterministic Java services only.
 - Java 21 + Spring Boot 3.3.x. Maven. No Kotlin, no Quarkus, no Gradle.
-- Single Claude API call per chat message. Model: claude-haiku-4-5. Never call Claude during ingestion.
+- Single Groq API call per chat message. Model: llama-3.3-70b-versatile. Never call LLM during ingestion.
 - No LangChain4j. No Ollama. No Docker Compose locally.
 
 ## Architecture
@@ -15,7 +15,7 @@ Backend   →  Spring Boot 3.3                        →  Railway
 Graph DB  →  Neo4j AuraDB free tier
 Vector DB →  pgvector on Supabase free tier
 Embed API →  HuggingFace Inference API (all-MiniLM-L6-v2, free)
-Chat LLM  →  Claude Haiku (only on user chat messages)
+Chat LLM  →  Groq (llama-3.3-70b-versatile, free tier, only on user chat messages)
 Data APIs →  arXiv API, Semantic Scholar API, GitHub API (all free)
 
 ## Package structure

@@ -23,8 +23,8 @@ management:
     health:
       show-details: never
 
-anthropic:
-  api-key: ${ANTHROPIC_API_KEY:}
+groq:
+  api-key: ${GROQ_API_KEY:}
 
 github:
   token: ${GITHUB_TOKEN:}
